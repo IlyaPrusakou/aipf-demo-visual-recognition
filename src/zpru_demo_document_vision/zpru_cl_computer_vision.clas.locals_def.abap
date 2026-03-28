@@ -52,58 +52,10 @@ CLASS lcl_adf_syst_prompt_provider DEFINITION INHERITING FROM zpru_cl_syst_prmpt
     METHODS set_arbitrary_text       REDEFINITION.
 ENDCLASS.
 
-
-CLASS lcl_adf_abap_executor DEFINITION INHERITING FROM zpru_cl_abap_executor CREATE PUBLIC.
+CLASS lcl_adf_create_cmr DEFINITION INHERITING FROM zpru_cl_abap_executor CREATE PUBLIC.
   PROTECTED SECTION.
     METHODS execute_code_int REDEFINITION.
 ENDCLASS.
-
-
-CLASS lcl_adf_knowledge_provider DEFINITION INHERITING FROM zpru_cl_knowledge_provider CREATE PUBLIC.
-  PROTECTED SECTION.
-    METHODS lookup_knowledge_int REDEFINITION.
-ENDCLASS.
-
-
-CLASS lcl_adf_nested_agent DEFINITION INHERITING FROM zpru_cl_nested_agent_runner CREATE PUBLIC.
-  PROTECTED SECTION.
-    METHODS run_nested_agent_int REDEFINITION.
-ENDCLASS.
-
-
-CLASS lcl_adf_http_request_tool DEFINITION INHERITING FROM zpru_cl_http_request_sender CREATE PUBLIC.
-  PROTECTED SECTION.
-    METHODS send_http_int REDEFINITION.
-ENDCLASS.
-
-
-CLASS lcl_adf_service_cons_mdl_tool DEFINITION INHERITING FROM zpru_cl_service_model_consumer CREATE PUBLIC.
-  PROTECTED SECTION.
-    METHODS consume_service_model_int REDEFINITION.
-ENDCLASS.
-
-
-CLASS lcl_adf_call_llm_tool DEFINITION INHERITING FROM zpru_cl_llm_caller CREATE PUBLIC.
-  PROTECTED SECTION.
-    METHODS call_large_language_model_int REDEFINITION.
-ENDCLASS.
-
-
-CLASS lcl_adf_dynamic_abap_code_tool DEFINITION INHERITING FROM zpru_cl_dynamic_abap_base CREATE PUBLIC.
-ENDCLASS.
-
-
-CLASS lcl_adf_ml_model_inference DEFINITION INHERITING FROM zpru_cl_ml_model_inference CREATE PUBLIC.
-  PROTECTED SECTION.
-    METHODS get_ml_inference_int REDEFINITION.
-ENDCLASS.
-
-
-CLASS lcl_adf_user_tool DEFINITION INHERITING FROM zpru_cl_user_tool CREATE PUBLIC.
-  PROTECTED SECTION.
-    METHODS execute_user_tool_int REDEFINITION.
-ENDCLASS.
-
 
 CLASS lcl_adf_tool_provider DEFINITION INHERITING FROM zpru_cl_tool_provider CREATE PUBLIC.
   PROTECTED SECTION.

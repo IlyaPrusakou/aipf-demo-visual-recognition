@@ -1,15 +1,15 @@
-class ZBP_R_PRU_CMR_HEADER definition
-  public
-  abstract
-  final
-  for behavior of ZR_PRU_CMR_HEADER .
+CLASS zbp_r_pru_cmr_header DEFINITION
+  PUBLIC
+  ABSTRACT
+  FINAL
+  FOR BEHAVIOR OF zr_pru_cmr_header .
 
-public section.
-protected section.
-private section.
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+  PRIVATE SECTION.
 ENDCLASS.
 
 
 
-CLASS ZBP_R_PRU_CMR_HEADER IMPLEMENTATION.
+CLASS zbp_r_pru_cmr_header IMPLEMENTATION.
 ENDCLASS.

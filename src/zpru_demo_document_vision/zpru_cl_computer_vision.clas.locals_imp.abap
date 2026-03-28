@@ -83,60 +83,72 @@ CLASS lcl_adf_syst_prompt_provider IMPLEMENTATION.
 ENDCLASS.
 
 
-CLASS lcl_adf_abap_executor IMPLEMENTATION.
+CLASS lcl_adf_create_cmr IMPLEMENTATION.
   METHOD execute_code_int.
+
+    DATA lt_headers TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
+    DATA lt_items TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_cmr_create_head TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader.
+    DATA lt_cmr_create_item TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader\_cmritems.
+
+    FIELD-SYMBOLS: <ls_cmr_create> TYPE zpru_s_cmr_create_request.
+
+    ASSIGN is_input->* TO <ls_cmr_create>.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDIF.
+
+    /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmr_create>-cmrheaders
+                                         hex_as_base64 = abap_false
+                               CHANGING  data          = lt_headers ).
+
+    /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmr_create>-cmritems
+                                         hex_as_base64 = abap_false
+                               CHANGING  data          = lt_items ).
+    DATA(lv_item_cid) = 1.
+    LOOP AT lt_headers ASSIGNING FIELD-SYMBOL(<ls_header>).
+
+      APPEND INITIAL LINE TO lt_cmr_create_head ASSIGNING FIELD-SYMBOL(<ls_cmr_create_head>).
+      <ls_cmr_create_head> = CORRESPONDING #( <ls_header> MAPPING TO ENTITY CHANGING CONTROL ).
+      <ls_cmr_create_head>-%cid = '1'.
+
+      LOOP AT lt_items ASSIGNING FIELD-SYMBOL(<ls_item>)
+                       WHERE cmruuid = <ls_header>-cmruuid.
+        APPEND INITIAL LINE TO lt_cmr_create_item ASSIGNING FIELD-SYMBOL(<ls_cmr_create_item>).
+        <ls_cmr_create_item>-%cid_ref = '1'.
+        APPEND INITIAL LINE TO <ls_cmr_create_item>-%target ASSIGNING FIELD-SYMBOL(<ls_cmr_item_target>).
+        <ls_cmr_item_target> = CORRESPONDING #( <ls_item> MAPPING TO ENTITY CHANGING CONTROL ).
+        <ls_cmr_item_target>-%cid = lv_item_cid.
+
+        lv_item_cid = lv_item_cid + 1.
+      ENDLOOP.
+    ENDLOOP.
+
+    IF lt_cmr_create_head IS INITIAL.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDIF.
+
+    MODIFY ENTITIES OF zr_pru_cmr_header
+    ENTITY zrprucmrheader
+    CREATE FROM lt_cmr_create_head
+    ENTITY zrprucmrheader
+    CREATE BY \_cmritems
+    FROM lt_cmr_create_item
+    MAPPED DATA(ls_mapped)
+    FAILED DATA(ls_failed)
+    REPORTED DATA(ls_reported).
+
   ENDMETHOD.
 ENDCLASS.
-
-
-CLASS lcl_adf_knowledge_provider IMPLEMENTATION.
-  METHOD lookup_knowledge_int.
-  ENDMETHOD.
-ENDCLASS.
-
-
-CLASS lcl_adf_nested_agent IMPLEMENTATION.
-  METHOD run_nested_agent_int.
-  ENDMETHOD.
-ENDCLASS.
-
-
-CLASS lcl_adf_http_request_tool IMPLEMENTATION.
-  METHOD send_http_int.
-  ENDMETHOD.
-ENDCLASS.
-
-
-CLASS lcl_adf_service_cons_mdl_tool IMPLEMENTATION.
-  METHOD consume_service_model_int.
-  ENDMETHOD.
-ENDCLASS.
-
-
-CLASS lcl_adf_call_llm_tool IMPLEMENTATION.
-  METHOD call_large_language_model_int.
-  ENDMETHOD.
-ENDCLASS.
-
-
-CLASS lcl_adf_dynamic_abap_code_tool IMPLEMENTATION.
-ENDCLASS.
-
-
-CLASS lcl_adf_ml_model_inference IMPLEMENTATION.
-  METHOD get_ml_inference_int.
-  ENDMETHOD.
-ENDCLASS.
-
-
-CLASS lcl_adf_user_tool IMPLEMENTATION.
-  METHOD execute_user_tool_int.
-  ENDMETHOD.
-ENDCLASS.
-
 
 CLASS lcl_adf_tool_provider IMPLEMENTATION.
   METHOD provide_tool_instance.
+    CASE  is_tool_master_data-toolname.
+      WHEN `CREATE_CMR`.
+        ro_executor = NEW lcl_adf_create_cmr( ).
+      WHEN OTHERS.
+        RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDCASE.
   ENDMETHOD.
 ENDCLASS.
 
@@ -155,6 +167,12 @@ ENDCLASS.
 
 CLASS lcl_adf_schema_provider IMPLEMENTATION.
   METHOD get_input_abap_type.
+    CASE  is_tool_master_data-toolname.
+      WHEN `CREATE_CMR`.
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `ZPRU_S_CMR_CREATE_REQUEST` ).
+      WHEN OTHERS.
+        RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDCASE.
   ENDMETHOD.
 
   METHOD get_input_json_schema.
