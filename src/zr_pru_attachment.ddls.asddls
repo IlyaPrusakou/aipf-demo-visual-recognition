@@ -1,9 +1,6 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 
 @EndUserText.label: 'Attachment'
-
-@Metadata.ignorePropagatedAnnotations: true
-
 define view entity ZR_PRU_ATTACHMENT
   as select from zpru_attachment
 

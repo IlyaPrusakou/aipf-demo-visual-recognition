@@ -1,6 +1,5 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Attachment'
-@Metadata.ignorePropagatedAnnotations: true
 @Metadata.allowExtensions: true
 define view entity ZC_PRU_ATTACHMENT
   as projection on ZR_PRU_ATTACHMENT
