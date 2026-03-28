@@ -13,6 +13,8 @@ use etag
 
   use association _attachment { create; with draft; }
 
+  use action PerformVisualRecognition;
+
   use action Edit;
   use action Activate;
   use action Discard;

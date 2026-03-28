@@ -31,6 +31,8 @@ authorization master ( global )
 
   association _attachment { create; with draft; }
 
+  action PerformVisualRecognition;
+
   draft action Activate optimized;
   draft action Discard;
   draft action Edit;
