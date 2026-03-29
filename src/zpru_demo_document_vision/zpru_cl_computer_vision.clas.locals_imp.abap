@@ -68,6 +68,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     DATA lt_abap_payload     TYPE REF TO ts_gemini_request.
     DATA lv_string_payload   TYPE string.
     DATA ls_llm_output TYPE ts_gemini_response.
+    DATA ls_payload TYPE zbp_r_pru_message=>ts_doc_recognition.
 
     lv_gemini_url = `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`.
     TRY.
@@ -84,6 +85,24 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
                                        i_value = 'application/json' ).
     lo_http_request->set_header_field( i_name  = 'x-goog-api-key'
                                        i_value = 'MY API KEY' ).
+
+    /ui2/cl_json=>deserialize( EXPORTING json = is_input_prompt-string_content
+                               CHANGING  data = ls_payload ).
+
+
+    LOOP AT ls_payload-message ASSIGNING FIELD-SYMBOL(<ls_message>).
+      LOOP AT ls_payload-attachment ASSIGNING FIELD-SYMBOL(<ls_attachment>)
+                                    WHERE messageid = <ls_message>-messageid.
+
+
+
+
+
+
+      ENDLOOP.
+    ENDLOOP.
+
+
 
 *    cl_web_http_utility=>encode_x_base64( unencoded = 'payload' ).
 

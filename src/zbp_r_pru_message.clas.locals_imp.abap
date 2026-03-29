@@ -68,11 +68,9 @@ CLASS lhc_zr_pru_message IMPLEMENTATION.
           EXPORTING
             iv_built_run_uuid      = lv_built_run_uuid
             iv_built_query_uuid    = lv_built_query_uuid
-*          IMPORTING
-*            ev_final_response      =
-*            eo_executed_controller =
-        ).
-*        CATCH zpru_cx_agent_core.
+          IMPORTING
+            ev_final_response      = DATA(lo_final_response)
+            eo_executed_controller = DATA(lo_executed_controller) ).
 
       CATCH zpru_cx_agent_core.
         RETURN.
