@@ -5,7 +5,65 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD prepare_first_tool_input.
+
+    TYPES:
+
+      BEGIN OF ts_items,
+        cmrid              TYPE char10,
+        itemposition       TYPE n LENGTH 4,
+        marksnumbers       TYPE char100,
+        packagecount       TYPE int4,
+        packingmethod      TYPE char100,
+        natureofgoods      TYPE char100,
+        statisticalnumber  TYPE char20,
+        weightunitfield    TYPE msehi,
+        volumeunitfield    TYPE msehi,
+        grossweight        TYPE p LENGTH 7 DECIMALS 3,
+        volume             TYPE p LENGTH 7 DECIMALS 3,
+        unitednationnumber TYPE char10,
+        hazardclass        TYPE char5,
+        packinggroup       TYPE char10,
+      END OF ts_items,
+
+      tt_items TYPE STANDARD TABLE OF ts_items WITH EMPTY KEY,
+
+      BEGIN OF ts_headers,
+        cmrid             TYPE char10,
+        senderinfo        TYPE char255,
+        consigneeinfo     TYPE char255,
+        deliveryplace     TYPE char100,
+        takingoverplace   TYPE char100,
+        takingoverdate    TYPE dats,
+        carrierinfo       TYPE char255,
+        successivecarrier TYPE char255,
+        carrierreservice  TYPE char255,
+        senderinstruction TYPE char255,
+        cashondelivery    TYPE p LENGTH 8 DECIMALS 2,
+        currency          TYPE waers_curc,
+        establishedplace  TYPE char100,
+        establisheddate   TYPE dats,
+        createdby         TYPE char12,
+        createdat         TYPE timestampl,
+        lastchangedby     TYPE char12,
+        lastchangedat     TYPE timestampl,
+      END OF ts_headers,
+
+      BEGIN OF ts_response,
+        header TYPE ts_headers,
+        items  TYPE tt_items,
+      END OF ts_response,
+
+      tt_response_root TYPE STANDARD TABLE OF ts_response WITH EMPTY KEY.
+
+    DATA lt_raw_response TYPE tt_response_root.
     DATA ls_cmr_create_request TYPE zpru_s_cmr_create_request.
+
+    /ui2/cl_json=>deserialize( EXPORTING json = iv_thinking_output
+                               CHANGING  data = lt_raw_response ).
+
+    IF lt_raw_response IS INITIAL.
+      RETURN.
+    ENDIF.
 
     CASE is_first_tool-toolname.
       WHEN `CREATE_CMR`.
@@ -95,35 +153,63 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lv_header_schema) = |cmrid TYPE char10, | &&
-                             |senderinfo TYPE char255, | &&
-                             |consigneeinfo TYPE char255, | &&
-                             |deliveryplace TYPE char100, | &&
-                             |takingoverplace TYPE char100, | &&
-                             |takingoverdate TYPE dats, | &&
-                             |carrierinfo TYPE char255, | &&
-                             |successivecarrier TYPE char255, | &&
-                             |carrierreservice TYPE char255, | &&
-                             |senderinstruction TYPE char255, | &&
-                             |cashondelivery TYPE curr15_2, | &&
-                             |currency TYPE cuky, | &&
-                             |establishedplace TYPE char100, | &&
-                             |establisheddate TYPE dats, |.
-
-    DATA(lv_item_schema_string) = |cmrid TYPE char10, | &&
-                                  |itemposition TYPE n LENGTH 4, | &&
-                                  |marksnumbers TYPE char50, | &&
-                                  |packagecount TYPE int4, | &&
-                                  |packingmethod TYPE char50, | &&
-                                  |natureofgoods TYPE char100, | &&
-                                  |statisticalnumber TYPE char20, | &&
-                                  |weightunitfield TYPE unit, | &&
-                                  |volumeunitfield TYPE unit, | &&
-                                  |grossweight TYPE quan13_3, | &&
-                                  |volume TYPE quan13_3, | &&
-                                  |unitednationnumber TYPE char10, | &&
-                                  |hazardclass TYPE char5, | &&
-                                  |packinggroup TYPE char10|.
+    DATA(lv_json_schema) =
+      |\{| &&
+      |  "type": "array",| &&
+      |  "items": \{| &&
+      |    "type": "object",| &&
+      |    "properties": \{| &&
+      |      "header": \{| &&
+      |        "type": "object",| &&
+      |        "properties": \{| &&
+      |          "cmrid": \{ "type": "string" \},| &&
+      |          "senderinfo": \{ "type": "string" \},| &&
+      |          "consigneeinfo": \{ "type": "string" \},| &&
+      |          "deliveryplace": \{ "type": "string" \},| &&
+      |          "takingoverplace": \{ "type": "string" \},| &&
+      |          "takingoverdate": \{ "type": "string" \},| &&
+      |          "carrierinfo": \{ "type": "string" \},| &&
+      |          "successivecarrier": \{ "type": "string" \},| &&
+      |          "carrierreservice": \{ "type": "string" \},| &&
+      |          "senderinstruction": \{ "type": "string" \},| &&
+      |          "cashondelivery": \{ "type": "number" \},| &&
+      |          "currency": \{ "type": "string" \},| &&
+      |          "establishedplace": \{ "type": "string" \},| &&
+      |          "establisheddate": \{ "type": "string" \},| &&
+      |          "createdby": \{ "type": "string" \},| &&
+      |          "createdat": \{ "type": "string" \},| &&
+      |          "lastchangedby": \{ "type": "string" \},| &&
+      |          "lastchangedat": \{ "type": "string" \}| &&
+      |        \},| &&
+      |        "required": ["cmrid"]| &&
+      |      \},| &&
+      |      "items": \{| &&
+      |        "type": "array",| &&
+      |        "items": \{| &&
+      |          "type": "object",| &&
+      |          "properties": \{| &&
+      |            "cmrid": \{ "type": "string" \},| &&
+      |            "itemposition": \{ "type": "string" \},| &&
+      |            "marksnumbers": \{ "type": "string" \},| &&
+      |            "packagecount": \{ "type": "integer" \},| &&
+      |            "packingmethod": \{ "type": "string" \},| &&
+      |            "natureofgoods": \{ "type": "string" \},| &&
+      |            "statisticalnumber": \{ "type": "string" \},| &&
+      |            "weightunitfield": \{ "type": "string" \},| &&
+      |            "volumeunitfield": \{ "type": "string" \},| &&
+      |            "grossweight": \{ "type": "number" \},| &&
+      |            "volume": \{ "type": "number" \},| &&
+      |            "unitednationnumber": \{ "type": "string" \},| &&
+      |            "hazardclass": \{ "type": "string" \},| &&
+      |            "packinggroup": \{ "type": "string" \}| &&
+      |          \},| &&
+      |          "required": ["itemposition", "natureofgoods"]| &&
+      |        \}| &&
+      |      \}| &&
+      |    \},| &&
+      |    "required": ["header", "items"]| &&
+      |  \}| &&
+      |\}|.
 
     APPEND INITIAL LINE TO <ls_abap_payload>-contents ASSIGNING FIELD-SYMBOL(<ls_contnent>).
     APPEND INITIAL LINE TO <ls_contnent>-parts ASSIGNING FIELD-SYMBOL(<ls_part>).
@@ -132,28 +218,24 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 
       <ls_part>-text = |{ <ls_part>-text } always use USD as currency, KG as weight and M3 as volume.{ cl_abap_char_utilities=>newline }|.
       <ls_part>-text = |{ <ls_part>-text } always give me output as json according the schema.{ cl_abap_char_utilities=>newline }|.
-      <ls_part>-text = |{ <ls_part>-text } For header use this schema: { lv_header_schema }{ cl_abap_char_utilities=>newline }|.
-      <ls_part>-text = |{ <ls_part>-text } For items use this schema: { lv_item_schema_string }{ cl_abap_char_utilities=>newline }|.
-
-
+      <ls_part>-text = |{ <ls_part>-text } For output use this schema: { lv_json_schema }{ cl_abap_char_utilities=>newline }|.
 
       LOOP AT ls_payload-attachment ASSIGNING FIELD-SYMBOL(<ls_attachment>)
                                     WHERE messageid = <ls_message>-messageid.
         DATA(lv_image_base64) = cl_web_http_utility=>encode_x_base64( unencoded = <ls_attachment>-attachment ).
 
-
-
-
+        APPEND INITIAL LINE TO <ls_contnent>-parts ASSIGNING <ls_part>.
+        <ls_part>-inline_data-mime_type = 'image/jpeg'.
+        <ls_part>-inline_data-data = lv_image_base64.
       ENDLOOP.
     ENDLOOP.
 
-
-
-
-    " prepare abap payload
-
     lv_string_payload = /ui2/cl_json=>serialize( data     = ls_abap_payload
                                                  compress = abap_true ).
+
+    IF lv_string_payload IS INITIAL.
+      RETURN.
+    ENDIF.
 
     lo_http_request->set_text( i_text = lv_string_payload ).
 
@@ -172,7 +254,13 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     /ui2/cl_json=>deserialize( EXPORTING json = lv_gemini_output
                                CHANGING  data = ls_llm_output ).
 
+    DATA(lv_raw_response) = VALUE #( ls_llm_output-candidates[ 1 ]-content-parts[ 1 ]-text OPTIONAL ).
 
+    IF lv_raw_response IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    ev_thinking_output = lv_raw_response.
 
   ENDMETHOD.
 
