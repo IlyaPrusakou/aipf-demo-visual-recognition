@@ -65,10 +65,11 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     DATA lv_gemini_url       TYPE string.
     DATA lo_http_destination TYPE REF TO if_http_destination.
     DATA lo_http_client      TYPE REF TO if_web_http_client.
-    DATA lt_abap_payload     TYPE REF TO ts_gemini_request.
+    DATA ls_abap_payload     TYPE REF TO ts_gemini_request.
     DATA lv_string_payload   TYPE string.
     DATA ls_llm_output TYPE ts_gemini_response.
     DATA ls_payload TYPE zbp_r_pru_message=>ts_doc_recognition.
+    DATA lv_output_schema TYPE string.
 
     lv_gemini_url = `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`.
     TRY.
@@ -89,12 +90,56 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     /ui2/cl_json=>deserialize( EXPORTING json = is_input_prompt-string_content
                                CHANGING  data = ls_payload ).
 
+    ASSIGN ls_abap_payload->* TO FIELD-SYMBOL(<ls_abap_payload>).
+    IF sy-subrc <> 0.
+      RETURN.
+    ENDIF.
+
+    DATA(lv_header_schema) = |cmrid TYPE char10, | &&
+                             |senderinfo TYPE char255, | &&
+                             |consigneeinfo TYPE char255, | &&
+                             |deliveryplace TYPE char100, | &&
+                             |takingoverplace TYPE char100, | &&
+                             |takingoverdate TYPE dats, | &&
+                             |carrierinfo TYPE char255, | &&
+                             |successivecarrier TYPE char255, | &&
+                             |carrierreservice TYPE char255, | &&
+                             |senderinstruction TYPE char255, | &&
+                             |cashondelivery TYPE curr15_2, | &&
+                             |currency TYPE cuky, | &&
+                             |establishedplace TYPE char100, | &&
+                             |establisheddate TYPE dats, |.
+
+    DATA(lv_item_schema_string) = |cmrid TYPE char10, | &&
+                                  |itemposition TYPE n LENGTH 4, | &&
+                                  |marksnumbers TYPE char50, | &&
+                                  |packagecount TYPE int4, | &&
+                                  |packingmethod TYPE char50, | &&
+                                  |natureofgoods TYPE char100, | &&
+                                  |statisticalnumber TYPE char20, | &&
+                                  |weightunitfield TYPE unit, | &&
+                                  |volumeunitfield TYPE unit, | &&
+                                  |grossweight TYPE quan13_3, | &&
+                                  |volume TYPE quan13_3, | &&
+                                  |unitednationnumber TYPE char10, | &&
+                                  |hazardclass TYPE char5, | &&
+                                  |packinggroup TYPE char10|.
+
+    APPEND INITIAL LINE TO <ls_abap_payload>-contents ASSIGNING FIELD-SYMBOL(<ls_contnent>).
+    APPEND INITIAL LINE TO <ls_contnent>-parts ASSIGNING FIELD-SYMBOL(<ls_part>).
 
     LOOP AT ls_payload-message ASSIGNING FIELD-SYMBOL(<ls_message>).
+
+      <ls_part>-text = |{ <ls_part>-text } always use USD as currency, KG as weight and M3 as volume.{ cl_abap_char_utilities=>newline }|.
+      <ls_part>-text = |{ <ls_part>-text } always give me output as json according the schema.{ cl_abap_char_utilities=>newline }|.
+      <ls_part>-text = |{ <ls_part>-text } For header use this schema: { lv_header_schema }{ cl_abap_char_utilities=>newline }|.
+      <ls_part>-text = |{ <ls_part>-text } For items use this schema: { lv_item_schema_string }{ cl_abap_char_utilities=>newline }|.
+
+
+
       LOOP AT ls_payload-attachment ASSIGNING FIELD-SYMBOL(<ls_attachment>)
                                     WHERE messageid = <ls_message>-messageid.
-
-
+        DATA(lv_image_base64) = cl_web_http_utility=>encode_x_base64( unencoded = <ls_attachment>-attachment ).
 
 
 
@@ -104,11 +149,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 
 
 
-*    cl_web_http_utility=>encode_x_base64( unencoded = 'payload' ).
 
     " prepare abap payload
 
-    lv_string_payload = /ui2/cl_json=>serialize( data     = lt_abap_payload
+    lv_string_payload = /ui2/cl_json=>serialize( data     = ls_abap_payload
                                                  compress = abap_true ).
 
     lo_http_request->set_text( i_text = lv_string_payload ).
