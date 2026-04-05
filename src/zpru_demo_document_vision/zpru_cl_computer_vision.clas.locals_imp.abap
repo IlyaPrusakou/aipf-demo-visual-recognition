@@ -1,4 +1,3 @@
-
 CLASS lcl_adf_decision_provider IMPLEMENTATION.
   METHOD check_authorizations.
     RETURN.
@@ -59,6 +58,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     DATA ls_cmr_create_request TYPE zpru_s_cmr_create_request.
     DATA lt_header TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
     DATA lt_items TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA LS_PAYLOAD TYPE zbp_r_pru_message=>ts_doc_recognition.
 
     /ui2/cl_json=>deserialize( EXPORTING json = iv_thinking_output
                                CHANGING  data = lt_raw_response ).
@@ -69,6 +69,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 
     CASE is_first_tool-toolname.
       WHEN `CREATE_CMR`.
+
         LOOP AT lt_raw_response ASSIGNING FIELD-SYMBOL(<ls_raw_response>).
           APPEND INITIAL LINE TO lt_header ASSIGNING FIELD-SYMBOL(<ls_header>).
           <ls_header> = CORRESPONDING #( <ls_raw_response>-header ).
@@ -139,8 +140,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     DATA ls_abap_payload     TYPE REF TO ts_gemini_request.
     DATA lv_string_payload   TYPE string.
     DATA ls_llm_output TYPE ts_gemini_response.
-    DATA ls_payload TYPE zbp_r_pru_message=>ts_doc_recognition.
+    DATA lR_payload TYPE REF TO data.
     DATA lv_output_schema TYPE string.
+
+    FIELD-SYMBOLS <LS_PAYLOAD> TYPE zbp_r_pru_message=>ts_doc_recognition.
 
     lv_gemini_url = `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`.
     TRY.
@@ -158,8 +161,15 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     lo_http_request->set_header_field( i_name  = 'x-goog-api-key'
                                        i_value = 'MY API KEY' ).
 
+    CREATE DATA lR_payload TYPE (is_input_prompt-type).
+
+    ASSIGN lR_payload->* TO <LS_PAYLOAD>.
+    IF SY-SUBRC <> 0.
+    RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDIF.
+
     /ui2/cl_json=>deserialize( EXPORTING json = is_input_prompt-string_content
-                               CHANGING  data = ls_payload ).
+                               CHANGING  data = <LS_PAYLOAD> ).
 
     ASSIGN ls_abap_payload->* TO FIELD-SYMBOL(<ls_abap_payload>).
     IF sy-subrc <> 0.
@@ -227,13 +237,13 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     APPEND INITIAL LINE TO <ls_abap_payload>-contents ASSIGNING FIELD-SYMBOL(<ls_contnent>).
     APPEND INITIAL LINE TO <ls_contnent>-parts ASSIGNING FIELD-SYMBOL(<ls_part>).
 
-    LOOP AT ls_payload-message ASSIGNING FIELD-SYMBOL(<ls_message>).
+    LOOP AT <LS_PAYLOAD>-message ASSIGNING FIELD-SYMBOL(<ls_message>).
 
       <ls_part>-text = |{ <ls_part>-text } always use USD as currency, KG as weight and M3 as volume.{ cl_abap_char_utilities=>newline }|.
       <ls_part>-text = |{ <ls_part>-text } always give me output as json according the schema.{ cl_abap_char_utilities=>newline }|.
       <ls_part>-text = |{ <ls_part>-text } For output use this schema: { lv_json_schema }{ cl_abap_char_utilities=>newline }|.
 
-      LOOP AT ls_payload-attachment ASSIGNING FIELD-SYMBOL(<ls_attachment>)
+      LOOP AT <LS_PAYLOAD>-attachment ASSIGNING FIELD-SYMBOL(<ls_attachment>)
                                     WHERE messageid = <ls_message>-messageid.
         DATA(lv_image_base64) = cl_web_http_utility=>encode_x_base64( unencoded = <ls_attachment>-attachment ).
 
