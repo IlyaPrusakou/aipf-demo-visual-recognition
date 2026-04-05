@@ -290,23 +290,89 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 
     lo_http_request->set_text( i_text = lv_string_payload ).
 
-    TRY.
-        DATA(lo_response) = lo_http_client->execute( i_method = if_web_http_client=>post ).
-      CATCH cx_web_http_client_error.
-        RAISE EXCEPTION NEW zpru_cx_agent_core( ).
-    ENDTRY.
+*    TRY.
+*        DATA(lo_response) = lo_http_client->execute( i_method = if_web_http_client=>post ).
+*      CATCH cx_web_http_client_error.
+*        RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+*    ENDTRY.
+*
+*    IF lo_response->get_status( )-code <> `200`.
+*      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+*    ENDIF.
+*
+*    DATA(lv_gemini_output) = lo_response->get_text( ).
+*
+*    /ui2/cl_json=>deserialize( EXPORTING json = lv_gemini_output
+*                               CHANGING  data = ls_llm_output ).
+*
+*    DATA(lv_raw_response) = VALUE #( ls_llm_output-candidates[ 1 ]-content-parts[ 1 ]-text OPTIONAL ).
 
-    IF lo_response->get_status( )-code <> `200`.
-      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
-    ENDIF.
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""" testing
 
-    DATA(lv_gemini_output) = lo_response->get_text( ).
-
-    /ui2/cl_json=>deserialize( EXPORTING json = lv_gemini_output
-                               CHANGING  data = ls_llm_output ).
-
-    DATA(lv_raw_response) = VALUE #( ls_llm_output-candidates[ 1 ]-content-parts[ 1 ]-text OPTIONAL ).
-
+DATA(lv_raw_response) = |[| &&
+|  \{| &&
+|    "messageid": "CMR-20260314-001",| &&
+|    "attachments": [| &&
+|      \{| &&
+|        "cmrheaders": [| &&
+|          \{| &&
+|            "cmrid": "",| &&
+|            "senderinfo": "Sender LTD",| &&
+|            "consigneeinfo": "Biedronka LTD",| &&
+|            "deliveryplace": "Wrocław",| &&
+|            "takingoverplace": "Warsaw",| &&
+|            "takingoverdate": "14/03/2026",| &&
+|            "carrierinfo": "DPD Polska",| &&
+|            "successivecarrier": "Biedronka Express",| &&
+|            "carrierreservice": null,| &&
+|            "senderinstruction": "spread into markets ASAP",| &&
+|            "cashondelivery": 1344,| &&
+|            "currency": "USD",| &&
+|            "establishedplace": "Wrocław, Biskupin",| &&
+|            "establisheddate": "31/03/2026",| &&
+|            "createdby": null,| &&
+|            "createdat": null,| &&
+|            "lastchangedby": null,| &&
+|            "lastchangedat": null,| &&
+|            "cmritems": [| &&
+|              \{| &&
+|                "itemposition": "prod1",| &&
+|                "marksnumbers": "prod1",| &&
+|                "packagecount": 14,| &&
+|                "packingmethod": "box",| &&
+|                "natureofgoods": "pencils",| &&
+|                "statisticalnumber": "st-14nr",| &&
+|                "weightunitfield": "KG",| &&
+|                "volumeunitfield": "M3",| &&
+|                "grossweight": 16,| &&
+|                "volume": 1,| &&
+|                "unitednationnumber": null,| &&
+|                "hazardclass": null,| &&
+|                "packinggroup": null| &&
+|              \},| &&
+|              \{| &&
+|                "itemposition": "prod2",| &&
+|                "marksnumbers": "prod2",| &&
+|                "packagecount": 8,| &&
+|                "packingmethod": "pallet",| &&
+|                "natureofgoods": "bananas",| &&
+|                "statisticalnumber": "st-888nr",| &&
+|                "weightunitfield": "KG",| &&
+|                "volumeunitfield": "M3",| &&
+|                "grossweight": 55,| &&
+|                "volume": 5,| &&
+|                "unitednationnumber": null,| &&
+|                "hazardclass": null,| &&
+|                "packinggroup": null| &&
+|              \}| &&
+|            ]| &&
+|          \}| &&
+|        ]| &&
+|      \}| &&
+|    ]| &&
+|  \}| &&
+|]|.
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" testing
     REPLACE FIRST OCCURRENCE OF '```json' IN lv_raw_response WITH ''.
     REPLACE ALL OCCURRENCES OF '```' IN lv_raw_response WITH ''.
 
