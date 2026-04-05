@@ -4,69 +4,65 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD prepare_first_tool_input.
+    TYPES: BEGIN OF ts_items,
+             itemposition       TYPE n LENGTH 4,
+             marksnumbers       TYPE char100,
+             packagecount       TYPE int4,
+             packingmethod      TYPE char100,
+             natureofgoods      TYPE char100,
+             statisticalnumber  TYPE char20,
+             weightunitfield    TYPE msehi,
+             volumeunitfield    TYPE msehi,
+             grossweight        TYPE p LENGTH 7 DECIMALS 3,
+             volume             TYPE p LENGTH 7 DECIMALS 3,
+             unitednationnumber TYPE char10,
+             hazardclass        TYPE char5,
+             packinggroup       TYPE char10,
+           END OF ts_items,
 
-    TYPES:
+           tt_items TYPE STANDARD TABLE OF ts_items WITH EMPTY KEY.
 
-      BEGIN OF ts_items,
-        itemposition       TYPE n LENGTH 4,
-        marksnumbers       TYPE char100,
-        packagecount       TYPE int4,
-        packingmethod      TYPE char100,
-        natureofgoods      TYPE char100,
-        statisticalnumber  TYPE char20,
-        weightunitfield    TYPE msehi,
-        volumeunitfield    TYPE msehi,
-        grossweight        TYPE p LENGTH 7 DECIMALS 3,
-        volume             TYPE p LENGTH 7 DECIMALS 3,
-        unitednationnumber TYPE char10,
-        hazardclass        TYPE char5,
-        packinggroup       TYPE char10,
-      END OF ts_items,
+    TYPES: BEGIN OF ts_headers,
+             cmrid             TYPE char10,
+             senderinfo        TYPE char255,
+             consigneeinfo     TYPE char255,
+             deliveryplace     TYPE char100,
+             takingoverplace   TYPE char100,
+             takingoverdate    TYPE dats,
+             carrierinfo       TYPE char255,
+             successivecarrier TYPE char255,
+             carrierreservice  TYPE char255,
+             senderinstruction TYPE char255,
+             cashondelivery    TYPE p LENGTH 8 DECIMALS 2,
+             currency          TYPE waers_curc,
+             establishedplace  TYPE char100,
+             establisheddate   TYPE dats,
+             createdby         TYPE char12,
+             createdat         TYPE timestampl,
+             lastchangedby     TYPE char12,
+             lastchangedat     TYPE timestampl,
+             cmritems          TYPE tt_items,
+           END OF ts_headers,
 
-      tt_items TYPE STANDARD TABLE OF ts_items WITH EMPTY KEY,
+           tt_headers TYPE STANDARD TABLE OF ts_headers WITH EMPTY KEY.
 
-      BEGIN OF ts_headers,
-        cmrid             TYPE char10,
-        senderinfo        TYPE char255,
-        consigneeinfo     TYPE char255,
-        deliveryplace     TYPE char100,
-        takingoverplace   TYPE char100,
-        takingoverdate    TYPE dats,
-        carrierinfo       TYPE char255,
-        successivecarrier TYPE char255,
-        carrierreservice  TYPE char255,
-        senderinstruction TYPE char255,
-        cashondelivery    TYPE p LENGTH 8 DECIMALS 2,
-        currency          TYPE waers_curc,
-        establishedplace  TYPE char100,
-        establisheddate   TYPE dats,
-        createdby         TYPE char12,
-        createdat         TYPE timestampl,
-        lastchangedby     TYPE char12,
-        lastchangedat     TYPE timestampl,
-        cmritems          TYPE tt_items,
-      END OF ts_headers,
+    TYPES: BEGIN OF ts_attachment,
+             cmrheaders TYPE tt_headers,
+           END OF ts_attachment,
 
-      tt_headers TYPE STANDARD TABLE OF ts_headers WITH EMPTY KEY,
+           tt_attachments TYPE STANDARD TABLE OF ts_attachment WITH EMPTY KEY.
 
-      BEGIN OF ts_attachment,
-        cmrheaders TYPE tt_headers,
-      END OF ts_attachment,
+    TYPES: BEGIN OF ts_response,
+             messageid   TYPE char32,
+             attachments TYPE tt_attachments,
+           END OF ts_response,
 
-      tt_attachments TYPE STANDARD TABLE OF ts_attachment WITH EMPTY KEY,
+           tt_response_root TYPE STANDARD TABLE OF ts_response WITH EMPTY KEY.
 
-      BEGIN OF ts_response,
-        messageid   TYPE char32,
-        attachments TYPE tt_attachments,
-      END OF ts_response,
-
-      tt_response_root TYPE STANDARD TABLE OF ts_response WITH EMPTY KEY.
-
-    DATA lt_raw_response TYPE tt_response_root.
+    DATA lt_raw_response       TYPE tt_response_root.
     DATA ls_cmr_create_request TYPE zpru_s_cmr_create_request.
-    DATA lt_header TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
-    DATA lt_items TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
-    DATA LS_PAYLOAD TYPE zbp_r_pru_message=>ts_doc_recognition.
+    DATA lt_header             TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
+    DATA lt_items              TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
 
     /ui2/cl_json=>deserialize( EXPORTING json = iv_thinking_output
                                CHANGING  data = lt_raw_response ).
@@ -79,6 +75,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
       WHEN `CREATE_CMR`.
 
         LOOP AT lt_raw_response ASSIGNING FIELD-SYMBOL(<ls_message>).
+
+          APPEND INITIAL LINE TO ls_cmr_create_request-cmrcreationrequest ASSIGNING FIELD-SYMBOL(<ls_cmrcreationrequest>).
+          <ls_cmrcreationrequest>-message = <ls_message>-messageid.
+
           LOOP AT <ls_message>-attachments ASSIGNING FIELD-SYMBOL(<ls_attachment>).
             LOOP AT <ls_attachment>-cmrheaders ASSIGNING FIELD-SYMBOL(<ls_raw_header>).
               APPEND INITIAL LINE TO lt_header ASSIGNING FIELD-SYMBOL(<ls_header>).
@@ -91,10 +91,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
               ENDLOOP.
             ENDLOOP.
           ENDLOOP.
-        ENDLOOP.
+          <ls_cmrcreationrequest>-cmrheaders = /ui2/cl_json=>serialize( data = lt_header ).
+          <ls_cmrcreationrequest>-cmritems   = /ui2/cl_json=>serialize( data = lt_items ).
 
-        ls_cmr_create_request-cmrheaders = /ui2/cl_json=>serialize( data     = lt_header ).
-        ls_cmr_create_request-cmritems = /ui2/cl_json=>serialize( data     = lt_items ).
+        ENDLOOP.
 
         er_first_tool_input = NEW zpru_s_cmr_create_request( ls_cmr_create_request ).
       WHEN OTHERS.
@@ -152,11 +152,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     DATA lo_http_client      TYPE REF TO if_web_http_client.
     DATA ls_abap_payload     TYPE REF TO ts_gemini_request.
     DATA lv_string_payload   TYPE string.
-    DATA ls_llm_output TYPE ts_gemini_response.
-    DATA lR_payload TYPE REF TO data.
-    DATA lv_output_schema TYPE string.
+    DATA ls_llm_output       TYPE ts_gemini_response.
+    DATA lr_payload          TYPE REF TO data.
 
-    FIELD-SYMBOLS <LS_PAYLOAD> TYPE zbp_r_pru_message=>ts_doc_recognition.
+    FIELD-SYMBOLS <ls_payload> TYPE zbp_r_pru_message=>ts_doc_recognition.
 
     lv_gemini_url = `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`.
     TRY.
@@ -174,15 +173,15 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     lo_http_request->set_header_field( i_name  = 'x-goog-api-key'
                                        i_value = 'MY API KEY' ).
 
-    CREATE DATA lR_payload TYPE (is_input_prompt-type).
+    CREATE DATA lr_payload TYPE (is_input_prompt-type).
 
-    ASSIGN lR_payload->* TO <LS_PAYLOAD>.
-    IF SY-SUBRC <> 0.
-    RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ASSIGN lr_payload->* TO <ls_payload>.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDIF.
 
     /ui2/cl_json=>deserialize( EXPORTING json = is_input_prompt-string_content
-                               CHANGING  data = <LS_PAYLOAD> ).
+                               CHANGING  data = <ls_payload> ).
 
     ASSIGN ls_abap_payload->* TO FIELD-SYMBOL(<ls_abap_payload>).
     IF sy-subrc <> 0.
@@ -262,19 +261,19 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     APPEND INITIAL LINE TO <ls_abap_payload>-contents ASSIGNING FIELD-SYMBOL(<ls_contnent>).
     APPEND INITIAL LINE TO <ls_contnent>-parts ASSIGNING FIELD-SYMBOL(<ls_part>).
 
-    LOOP AT <LS_PAYLOAD>-message ASSIGNING FIELD-SYMBOL(<ls_message>).
+    LOOP AT <ls_payload>-message ASSIGNING FIELD-SYMBOL(<ls_message>).
 
       <ls_part>-text = |{ <ls_part>-text } always use USD as currency, KG as weight and M3 as volume.{ cl_abap_char_utilities=>newline }|.
       <ls_part>-text = |{ <ls_part>-text } always give me output as json according the schema.{ cl_abap_char_utilities=>newline }|.
       <ls_part>-text = |{ <ls_part>-text } For output use this schema: { lv_json_schema }{ cl_abap_char_utilities=>newline }|.
 
-      LOOP AT <LS_PAYLOAD>-attachment ASSIGNING FIELD-SYMBOL(<ls_attachment>)
-                                    WHERE messageid = <ls_message>-messageid.
+      LOOP AT <ls_payload>-attachment ASSIGNING FIELD-SYMBOL(<ls_attachment>)
+           WHERE messageid = <ls_message>-messageid.
         DATA(lv_image_base64) = cl_web_http_utility=>encode_x_base64( unencoded = <ls_attachment>-attachment ).
 
         APPEND INITIAL LINE TO <ls_contnent>-parts ASSIGNING <ls_part>.
         <ls_part>-inline_data-mime_type = 'image/jpeg'.
-        <ls_part>-inline_data-data = lv_image_base64.
+        <ls_part>-inline_data-data      = lv_image_base64.
       ENDLOOP.
     ENDLOOP.
 
@@ -309,7 +308,6 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     ENDIF.
 
     ev_thinking_output = lv_raw_response.
-
   ENDMETHOD.
 
   METHOD read_data_4_thinking.
@@ -319,14 +317,12 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD set_final_response_content.
-
     DATA lo_axc_service        TYPE REF TO zpru_if_axc_service.
     DATA lt_axc_head           TYPE zpru_if_axc_type_and_constant=>tt_axc_head.
     DATA lt_axc_query          TYPE zpru_if_axc_type_and_constant=>tt_axc_query.
     DATA lt_axc_steps          TYPE zpru_if_axc_type_and_constant=>tt_axc_step.
     DATA ls_doc_recognition    TYPE zbp_r_pru_message=>ts_doc_recognition.
     DATA ls_recognition_output TYPE zbp_r_pru_message=>ts_recognition_output.
-    DATA lo_util               TYPE REF TO zpru_if_agent_util.
 
     lo_axc_service ?= zpru_cl_agent_service_mngr=>get_service( iv_service = `ZPRU_IF_AXC_SERVICE`
                                                                iv_context = zpru_if_agent_frw=>cs_context-standard ).
@@ -334,12 +330,12 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     " Read run head by run UUID
     lo_axc_service->read_header(
       EXPORTING it_head_read_k = VALUE #( ( runuuid = iv_run_uuid
-                                            control  = VALUE #( runuuid          = abap_true
-                                                                runid            = abap_true
-                                                                agentuuid        = abap_true
-                                                                userid           = abap_true
-                                                                RunStartDateTime = abap_true
-                                                                RunEndDateTime   = abap_true ) ) )
+                                            control = VALUE #( runuuid          = abap_true
+                                                               runid            = abap_true
+                                                               agentuuid        = abap_true
+                                                               userid           = abap_true
+                                                               runstartdatetime = abap_true
+                                                               runenddatetime   = abap_true ) ) )
       IMPORTING et_axc_head    = lt_axc_head ).
 
     " Read specific query by query UUID
@@ -348,29 +344,29 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
                                              control   = VALUE #( runuuid             = abap_true
                                                                   querynumber         = abap_true
                                                                   queryuuid           = abap_true
-                                                                  QueryLanguage       = abap_true
-                                                                  QueryStatus         = abap_true
-                                                                  QueryStartDateTime  = abap_true
-                                                                  QueryEndDateTime    = abap_true
-                                                                  QueryInputPrompt    = abap_true
-                                                                  QueryDecisionLog    = abap_true
-                                                                  QueryOutputResponse = abap_true ) ) )
+                                                                  querylanguage       = abap_true
+                                                                  querystatus         = abap_true
+                                                                  querystartdatetime  = abap_true
+                                                                  queryenddatetime    = abap_true
+                                                                  queryinputprompt    = abap_true
+                                                                  querydecisionlog    = abap_true
+                                                                  queryoutputresponse = abap_true ) ) )
       IMPORTING et_axc_query    = lt_axc_query ).
 
     " Read steps by query UUID (read by association)
     lo_axc_service->rba_step(
       EXPORTING it_rba_step_k = VALUE #( ( queryuuid = iv_query_uuid
-                                           control    = VALUE #( stepuuid           = abap_true
-                                                                 stepnumber         = abap_true
-                                                                 queryuuid          = abap_true
-                                                                 runuuid            = abap_true
-                                                                 tooluuid           = abap_true
-                                                                 StepSequence       = abap_true
-                                                                 stepstatus         = abap_true
-                                                                 StepStartDateTime  = abap_true
-                                                                 StepEndDateTime    = abap_true
-                                                                 StepInputPrompt    = abap_true
-                                                                 StepOutputResponse = abap_true ) ) )
+                                           control   = VALUE #( stepuuid           = abap_true
+                                                                stepnumber         = abap_true
+                                                                queryuuid          = abap_true
+                                                                runuuid            = abap_true
+                                                                tooluuid           = abap_true
+                                                                stepsequence       = abap_true
+                                                                stepstatus         = abap_true
+                                                                stepstartdatetime  = abap_true
+                                                                stependdatetime    = abap_true
+                                                                stepinputprompt    = abap_true
+                                                                stepoutputresponse = abap_true ) ) )
       IMPORTING et_axc_step   = lt_axc_steps ).
 
     " Get message from first input prompt
@@ -388,11 +384,18 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
       <ls_runtime>-steps   = CORRESPONDING #( lt_axc_steps ).
     ENDLOOP.
 
-    lo_util ?= zpru_cl_agent_service_mngr=>get_service( iv_service = `ZPRU_IF_AGENT_UTIL`
-                                                        iv_context = zpru_if_agent_frw=>cs_context-standard ).
+ cs_final_response_body-responsecontent = /ui2/cl_json=>serialize( data = ls_recognition_output ).
 
-    lo_util->convert_to_string( EXPORTING ir_abap   = REF #( ls_recognition_output )
-                                CHANGING  cr_string = cs_final_response_body-responsecontent ).
+  cs_final_response_body-type = `\CLASS=ZBP_R_PRU_MESSAGE\TYPE=TS_RECOGNITION_OUTPUT`.
+
+    SORT io_controller->mt_input_output BY number DESCENDING.
+    DATA(lt_freshest_context) = VALUE #( io_controller->mt_input_output[ 1 ]-key_value_pairs OPTIONAL ).
+
+    LOOP AT lt_freshest_context ASSIGNING FIELD-SYMBOL(<ls_context>).
+      APPEND INITIAL LINE TO cs_final_response_body-structureddata ASSIGNING fiELD-SYMBOL(<ls_structureddata>).
+      <ls_structureddata>-name  = <ls_context>-name.
+      <ls_structureddata>-value = <ls_context>-value.
+    ENDLOOP.
 
   ENDMETHOD.
 
@@ -463,10 +466,14 @@ ENDCLASS.
 
 CLASS lcl_adf_create_cmr IMPLEMENTATION.
   METHOD execute_code_int.
-    DATA lt_headers         TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
-    DATA lt_items           TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
-    DATA lt_cmr_create_head TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader.
-    DATA lt_cmr_create_item TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader\_cmritems.
+    DATA lt_headers            TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
+    DATA lt_items              TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_headers_all        TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
+    DATA lt_items_all          TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_cmr_create_head    TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader.
+    DATA lt_cmr_create_item    TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader\_cmritems.
+    DATA lt_cmr_header_context TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
+    DATA lt_cmr_item_context   TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
 
     FIELD-SYMBOLS <ls_cmr_create> TYPE zpru_s_cmr_create_request.
 
@@ -475,21 +482,32 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
       RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDIF.
 
-    /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmr_create>-cmrheaders
-                                         hex_as_base64 = abap_false
-                               CHANGING  data          = lt_headers ).
+    LOOP AT <ls_cmr_create>-cmrcreationrequest ASSIGNING FIELD-SYMBOL(<ls_cmrcreationrequest>).
 
-    /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmr_create>-cmritems
-                                         hex_as_base64 = abap_false
-                               CHANGING  data          = lt_items ).
+      CLEAR: lt_headers,
+             lt_items.
+
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmrcreationrequest>-cmrheaders
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_headers ).
+
+      lt_headers_all = CORRESPONDING #( BASE ( lt_headers_all ) lt_headers ).
+
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmrcreationrequest>-cmritems
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_items ).
+
+      lt_items_all = CORRESPONDING #( BASE ( lt_items_all ) lt_items ).
+    ENDLOOP.
+
     DATA(lv_item_cid) = 1.
-    LOOP AT lt_headers ASSIGNING FIELD-SYMBOL(<ls_header>).
+    LOOP AT lt_headers_all ASSIGNING FIELD-SYMBOL(<ls_header>).
 
       APPEND INITIAL LINE TO lt_cmr_create_head ASSIGNING FIELD-SYMBOL(<ls_cmr_create_head>).
       <ls_cmr_create_head> = CORRESPONDING #( <ls_header> MAPPING TO ENTITY CHANGING CONTROL ).
       <ls_cmr_create_head>-%cid = '1'.
 
-      LOOP AT lt_items ASSIGNING FIELD-SYMBOL(<ls_item>)
+      LOOP AT lt_items_all ASSIGNING FIELD-SYMBOL(<ls_item>)
            WHERE cmruuid = <ls_header>-cmruuid.
         APPEND INITIAL LINE TO lt_cmr_create_item ASSIGNING FIELD-SYMBOL(<ls_cmr_create_item>).
         <ls_cmr_create_item>-%cid_ref = '1'.
@@ -511,12 +529,43 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
            ENTITY zrprucmrheader
            CREATE BY \_cmritems
            FROM lt_cmr_create_item
-           " TODO: variable is assigned but never used (ABAP cleaner)
            MAPPED DATA(ls_mapped)
-           " TODO: variable is assigned but never used (ABAP cleaner)
            FAILED DATA(ls_failed)
            " TODO: variable is assigned but never used (ABAP cleaner)
            REPORTED DATA(ls_reported).
+
+    IF ls_failed IS NOT INITIAL.
+      ev_error_flag = abap_true.
+      RETURN.
+    ENDIF.
+
+    READ ENTITIES OF zr_pru_cmr_header
+         ENTITY zrprucmrheader
+         ALL FIELDS WITH CORRESPONDING #( ls_mapped-zrprucmrheader )
+         RESULT DATA(lt_new_cmr_headers).
+
+    READ ENTITIES OF zr_pru_cmr_header
+         ENTITY zrprucmritem
+         ALL FIELDS WITH CORRESPONDING #( ls_mapped-zrprucmritem )
+         RESULT DATA(lt_new_cmr_items).
+
+    lt_cmr_header_context = CORRESPONDING #( lt_new_cmr_headers MAPPING FROM ENTITY ).
+    lt_cmr_item_context = CORRESPONDING #( lt_new_cmr_items MAPPING FROM ENTITY ).
+
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_key_value>).
+    <ls_key_value>-name  = 'CMRHEADERS'.
+    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = lt_cmr_header_context
+                                                    compress = abap_true ).
+
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING <ls_key_value>.
+    <ls_key_value>-name  = 'CMRITEMS'.
+    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = lt_cmr_item_context
+                                                    compress = abap_true ).
+
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING <ls_key_value>.
+    <ls_key_value>-name  = 'CMRCREATIONREQUEST'.
+    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = <ls_cmr_create>-cmrcreationrequest
+                                                    compress = abap_true ).
   ENDMETHOD.
 ENDCLASS.
 
