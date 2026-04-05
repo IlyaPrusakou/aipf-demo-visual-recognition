@@ -1,5 +1,6 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Message Step'
+@Metadata.allowExtensions: true
 @Metadata.ignorePropagatedAnnotations: true
 define view entity zc_pru_message_step 
 as projection on zr_pru_message_step

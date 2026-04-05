@@ -10,4 +10,5 @@ define service ZUI_PRU_MESSAGE_O4
   provider contracts odata_v4_ui {
   expose ZC_PRU_MESSAGE;
   expose ZC_PRU_ATTACHMENT;
+  expose zc_pru_message_step;
 }

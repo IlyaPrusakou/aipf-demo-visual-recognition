@@ -1,0 +1,63 @@
+@Metadata.layer: #CORE
+annotate entity zc_pru_message_step with
+{
+
+  @UI.facet: [ { label: 'General Information',
+                 id: 'GeneralInfo',
+                 purpose: #STANDARD,
+                 position: 10,
+                 type: #IDENTIFICATION_REFERENCE } ]
+
+  @UI.hidden: true
+  Stepassignmentuuid;
+  @UI.hidden: true
+  Stepuuid;
+  @EndUserText.label: 'StepNumber'
+  @UI.identification: [ { position: 10, label: 'StepNumber' } ]
+  @UI.lineItem: [ { position: 10, label: 'StepNumber' } ]
+  @UI.selectionField: [ { position: 10 } ]
+  Stepnumber;
+  @EndUserText.label: 'MessageID'
+  @UI.identification: [ { position: 20, label: 'MessageID' } ]
+  @UI.lineItem: [ { position: 20, label: 'MessageID' } ]
+  @UI.selectionField: [ { position: 20 } ]
+  Messageid;
+  @UI.hidden: true
+  Queryuuid;
+  @UI.hidden: true
+  Runuuid;
+  @UI.hidden: true
+  Tooluuid;
+  @EndUserText.label: 'StepSequence'
+  @UI.identification: [ { position: 30, label: 'StepSequence' } ]
+  @UI.lineItem: [ { position: 30, label: 'StepSequence' } ]
+  @UI.selectionField: [ { position: 30 } ]
+  Stepsequence;
+  @EndUserText.label: 'StepStatus'
+  @UI.identification: [ { position: 40, label: 'StepStatus' } ]
+  @UI.lineItem: [ { position: 40, label: 'StepStatus' } ]
+  @UI.selectionField: [ { position: 40 } ]
+  Stepstatus;
+  @EndUserText.label: 'StepStartDateTime'
+  @UI.identification: [ { position: 50, label: 'StepStartDateTime' } ]
+  @UI.lineItem: [ { position: 50, label: 'StepStartDateTime' } ]
+  @UI.selectionField: [ { position: 50 } ]
+  Stepstartdatetime;
+  @EndUserText.label: 'StepStartEndTime'
+  @UI.identification: [ { position: 60, label: 'StepStartEndTime' } ]
+  @UI.lineItem: [ { position: 60, label: 'StepStartEndTime' } ]
+  @UI.selectionField: [ { position: 60 } ]
+  Stependdatetime;
+  @EndUserText.label: 'StepInputPrompt'
+  @UI.identification: [ { position: 70, label: 'StepInputPrompt' } ]
+  @UI.lineItem: [ { position: 70, label: 'StepInputPrompt' } ]
+  @UI.selectionField: [ { position: 70 } ]
+  Stepinputprompt;
+  @EndUserText.label: 'StepOutputResponse'
+  @UI.identification: [ { position: 80, label: 'StepOutputResponse' } ]
+  @UI.lineItem: [ { position: 80, label: 'StepOutputResponse' } ]
+  @UI.selectionField: [ { position: 80 } ]
+  Stepoutputresponse;
+
+
+}
