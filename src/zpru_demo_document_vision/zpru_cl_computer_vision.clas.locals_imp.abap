@@ -319,6 +319,81 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD set_final_response_content.
+
+    DATA lo_axc_service        TYPE REF TO zpru_if_axc_service.
+    DATA lt_axc_head           TYPE zpru_if_axc_type_and_constant=>tt_axc_head.
+    DATA lt_axc_query          TYPE zpru_if_axc_type_and_constant=>tt_axc_query.
+    DATA lt_axc_steps          TYPE zpru_if_axc_type_and_constant=>tt_axc_step.
+    DATA ls_doc_recognition    TYPE zbp_r_pru_message=>ts_doc_recognition.
+    DATA ls_recognition_output TYPE zbp_r_pru_message=>ts_recognition_output.
+    DATA lo_util               TYPE REF TO zpru_if_agent_util.
+
+    lo_axc_service ?= zpru_cl_agent_service_mngr=>get_service( iv_service = `ZPRU_IF_AXC_SERVICE`
+                                                               iv_context = zpru_if_agent_frw=>cs_context-standard ).
+
+    " Read run head by run UUID
+    lo_axc_service->read_header(
+      EXPORTING it_head_read_k = VALUE #( ( runuuid = iv_run_uuid
+                                            control  = VALUE #( runuuid          = abap_true
+                                                                runid            = abap_true
+                                                                agentuuid        = abap_true
+                                                                userid           = abap_true
+                                                                RunStartDateTime = abap_true
+                                                                RunEndDateTime   = abap_true ) ) )
+      IMPORTING et_axc_head    = lt_axc_head ).
+
+    " Read specific query by query UUID
+    lo_axc_service->read_query(
+      EXPORTING it_query_read_k = VALUE #( ( queryuuid = iv_query_uuid
+                                             control   = VALUE #( runuuid             = abap_true
+                                                                  querynumber         = abap_true
+                                                                  queryuuid           = abap_true
+                                                                  QueryLanguage       = abap_true
+                                                                  QueryStatus         = abap_true
+                                                                  QueryStartDateTime  = abap_true
+                                                                  QueryEndDateTime    = abap_true
+                                                                  QueryInputPrompt    = abap_true
+                                                                  QueryDecisionLog    = abap_true
+                                                                  QueryOutputResponse = abap_true ) ) )
+      IMPORTING et_axc_query    = lt_axc_query ).
+
+    " Read steps by query UUID (read by association)
+    lo_axc_service->rba_step(
+      EXPORTING it_rba_step_k = VALUE #( ( queryuuid = iv_query_uuid
+                                           control    = VALUE #( stepuuid           = abap_true
+                                                                 stepnumber         = abap_true
+                                                                 queryuuid          = abap_true
+                                                                 runuuid            = abap_true
+                                                                 tooluuid           = abap_true
+                                                                 StepSequence       = abap_true
+                                                                 stepstatus         = abap_true
+                                                                 StepStartDateTime  = abap_true
+                                                                 StepEndDateTime    = abap_true
+                                                                 StepInputPrompt    = abap_true
+                                                                 StepOutputResponse = abap_true ) ) )
+      IMPORTING et_axc_step   = lt_axc_steps ).
+
+    " Get message from first input prompt
+    SORT io_controller->mt_input_output BY number ASCENDING.
+    DATA(ls_input_prompt) = VALUE #( io_controller->mt_input_output[ 1 ]-input_prompt OPTIONAL ).
+    /ui2/cl_json=>deserialize( EXPORTING json = ls_input_prompt-string_content
+                               CHANGING  data = ls_doc_recognition ).
+
+    " Build one runtime entry per message
+    LOOP AT ls_doc_recognition-message ASSIGNING FIELD-SYMBOL(<ls_message>).
+      APPEND INITIAL LINE TO ls_recognition_output-agent_execution_runtime ASSIGNING FIELD-SYMBOL(<ls_runtime>).
+      <ls_runtime>-message = <ls_message>.
+      <ls_runtime>-run     = CORRESPONDING #( lt_axc_head ).
+      <ls_runtime>-query   = CORRESPONDING #( lt_axc_query ).
+      <ls_runtime>-steps   = CORRESPONDING #( lt_axc_steps ).
+    ENDLOOP.
+
+    lo_util ?= zpru_cl_agent_service_mngr=>get_service( iv_service = `ZPRU_IF_AGENT_UTIL`
+                                                        iv_context = zpru_if_agent_frw=>cs_context-standard ).
+
+    lo_util->convert_to_string( EXPORTING ir_abap   = REF #( ls_recognition_output )
+                                CHANGING  cr_string = cs_final_response_body-responsecontent ).
+
   ENDMETHOD.
 
   METHOD set_final_response_metadata.
