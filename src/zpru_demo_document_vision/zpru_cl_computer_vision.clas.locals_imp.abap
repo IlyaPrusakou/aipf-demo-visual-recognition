@@ -8,7 +8,6 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     TYPES:
 
       BEGIN OF ts_items,
-        cmrid              TYPE char10,
         itemposition       TYPE n LENGTH 4,
         marksnumbers       TYPE char100,
         packagecount       TYPE int4,
@@ -45,11 +44,20 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
         createdat         TYPE timestampl,
         lastchangedby     TYPE char12,
         lastchangedat     TYPE timestampl,
+        cmritems          TYPE tt_items,
       END OF ts_headers,
 
+      tt_headers TYPE STANDARD TABLE OF ts_headers WITH EMPTY KEY,
+
+      BEGIN OF ts_attachment,
+        cmrheaders TYPE tt_headers,
+      END OF ts_attachment,
+
+      tt_attachments TYPE STANDARD TABLE OF ts_attachment WITH EMPTY KEY,
+
       BEGIN OF ts_response,
-        header TYPE ts_headers,
-        items  TYPE tt_items,
+        messageid   TYPE char32,
+        attachments TYPE tt_attachments,
       END OF ts_response,
 
       tt_response_root TYPE STANDARD TABLE OF ts_response WITH EMPTY KEY.
@@ -70,13 +78,18 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     CASE is_first_tool-toolname.
       WHEN `CREATE_CMR`.
 
-        LOOP AT lt_raw_response ASSIGNING FIELD-SYMBOL(<ls_raw_response>).
-          APPEND INITIAL LINE TO lt_header ASSIGNING FIELD-SYMBOL(<ls_header>).
-          <ls_header> = CORRESPONDING #( <ls_raw_response>-header ).
+        LOOP AT lt_raw_response ASSIGNING FIELD-SYMBOL(<ls_message>).
+          LOOP AT <ls_message>-attachments ASSIGNING FIELD-SYMBOL(<ls_attachment>).
+            LOOP AT <ls_attachment>-cmrheaders ASSIGNING FIELD-SYMBOL(<ls_raw_header>).
+              APPEND INITIAL LINE TO lt_header ASSIGNING FIELD-SYMBOL(<ls_header>).
+              <ls_header> = CORRESPONDING #( <ls_raw_header> ).
 
-          LOOP AT <ls_raw_response>-items ASSIGNING FIELD-SYMBOL(<ls_raw_item>).
-            APPEND INITIAL LINE TO lt_items ASSIGNING  FIELD-SYMBOL(<ls_item>).
-            <ls_item> = CORRESPONDING #( <ls_raw_item> ).
+              LOOP AT <ls_raw_header>-cmritems ASSIGNING FIELD-SYMBOL(<ls_raw_item>).
+                APPEND INITIAL LINE TO lt_items ASSIGNING FIELD-SYMBOL(<ls_item>).
+                <ls_item> = CORRESPONDING #( <ls_raw_item> ).
+                <ls_item>-cmrid = <ls_raw_header>-cmrid.
+              ENDLOOP.
+            ENDLOOP.
           ENDLOOP.
         ENDLOOP.
 
@@ -182,55 +195,67 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
       |  "items": \{| &&
       |    "type": "object",| &&
       |    "properties": \{| &&
-      |      "header": \{| &&
-      |        "type": "object",| &&
-      |        "properties": \{| &&
-      |          "cmrid": \{ "type": "string" \},| &&
-      |          "senderinfo": \{ "type": "string" \},| &&
-      |          "consigneeinfo": \{ "type": "string" \},| &&
-      |          "deliveryplace": \{ "type": "string" \},| &&
-      |          "takingoverplace": \{ "type": "string" \},| &&
-      |          "takingoverdate": \{ "type": "string" \},| &&
-      |          "carrierinfo": \{ "type": "string" \},| &&
-      |          "successivecarrier": \{ "type": "string" \},| &&
-      |          "carrierreservice": \{ "type": "string" \},| &&
-      |          "senderinstruction": \{ "type": "string" \},| &&
-      |          "cashondelivery": \{ "type": "number" \},| &&
-      |          "currency": \{ "type": "string" \},| &&
-      |          "establishedplace": \{ "type": "string" \},| &&
-      |          "establisheddate": \{ "type": "string" \},| &&
-      |          "createdby": \{ "type": "string" \},| &&
-      |          "createdat": \{ "type": "string" \},| &&
-      |          "lastchangedby": \{ "type": "string" \},| &&
-      |          "lastchangedat": \{ "type": "string" \}| &&
-      |        \},| &&
-      |        "required": ["cmrid"]| &&
-      |      \},| &&
-      |      "items": \{| &&
+      |      "messageid": \{ "type": "string" \},| &&
+      |      "attachments": \{| &&
       |        "type": "array",| &&
       |        "items": \{| &&
       |          "type": "object",| &&
       |          "properties": \{| &&
-      |            "cmrid": \{ "type": "string" \},| &&
-      |            "itemposition": \{ "type": "string" \},| &&
-      |            "marksnumbers": \{ "type": "string" \},| &&
-      |            "packagecount": \{ "type": "integer" \},| &&
-      |            "packingmethod": \{ "type": "string" \},| &&
-      |            "natureofgoods": \{ "type": "string" \},| &&
-      |            "statisticalnumber": \{ "type": "string" \},| &&
-      |            "weightunitfield": \{ "type": "string" \},| &&
-      |            "volumeunitfield": \{ "type": "string" \},| &&
-      |            "grossweight": \{ "type": "number" \},| &&
-      |            "volume": \{ "type": "number" \},| &&
-      |            "unitednationnumber": \{ "type": "string" \},| &&
-      |            "hazardclass": \{ "type": "string" \},| &&
-      |            "packinggroup": \{ "type": "string" \}| &&
+      |            "cmrheaders": \{| &&
+      |              "type": "array",| &&
+      |              "items": \{| &&
+      |                "type": "object",| &&
+      |                "properties": \{| &&
+      |                  "cmrid": \{ "type": "string" \},| &&
+      |                  "senderinfo": \{ "type": "string" \},| &&
+      |                  "consigneeinfo": \{ "type": "string" \},| &&
+      |                  "deliveryplace": \{ "type": "string" \},| &&
+      |                  "takingoverplace": \{ "type": "string" \},| &&
+      |                  "takingoverdate": \{ "type": "string" \},| &&
+      |                  "carrierinfo": \{ "type": "string" \},| &&
+      |                  "successivecarrier": \{ "type": "string" \},| &&
+      |                  "carrierreservice": \{ "type": "string" \},| &&
+      |                  "senderinstruction": \{ "type": "string" \},| &&
+      |                  "cashondelivery": \{ "type": "number" \},| &&
+      |                  "currency": \{ "type": "string" \},| &&
+      |                  "establishedplace": \{ "type": "string" \},| &&
+      |                  "establisheddate": \{ "type": "string" \},| &&
+      |                  "createdby": \{ "type": "string" \},| &&
+      |                  "createdat": \{ "type": "string" \},| &&
+      |                  "lastchangedby": \{ "type": "string" \},| &&
+      |                  "lastchangedat": \{ "type": "string" \},| &&
+      |                  "cmritems": \{| &&
+      |                    "type": "array",| &&
+      |                    "items": \{| &&
+      |                      "type": "object",| &&
+      |                      "properties": \{| &&
+      |                        "itemposition": \{ "type": "string" \},| &&
+      |                        "marksnumbers": \{ "type": "string" \},| &&
+      |                        "packagecount": \{ "type": "integer" \},| &&
+      |                        "packingmethod": \{ "type": "string" \},| &&
+      |                        "natureofgoods": \{ "type": "string" \},| &&
+      |                        "statisticalnumber": \{ "type": "string" \},| &&
+      |                        "weightunitfield": \{ "type": "string" \},| &&
+      |                        "volumeunitfield": \{ "type": "string" \},| &&
+      |                        "grossweight": \{ "type": "number" \},| &&
+      |                        "volume": \{ "type": "number" \},| &&
+      |                        "unitednationnumber": \{ "type": "string" \},| &&
+      |                        "hazardclass": \{ "type": "string" \},| &&
+      |                        "packinggroup": \{ "type": "string" \}| &&
+      |                      \},| &&
+      |                      "required": ["itemposition", "natureofgoods"]| &&
+      |                    \}| &&
+      |                  \}| &&
+      |                \},| &&
+      |                "required": ["cmrid", "cmritems"]| &&
+      |              \}| &&
+      |            \}| &&
       |          \},| &&
-      |          "required": ["itemposition", "natureofgoods"]| &&
+      |          "required": ["cmrheaders"]| &&
       |        \}| &&
       |      \}| &&
       |    \},| &&
-      |    "required": ["header", "items"]| &&
+      |    "required": ["messageid", "attachments"]| &&
       |  \}| &&
       |\}|.
 
