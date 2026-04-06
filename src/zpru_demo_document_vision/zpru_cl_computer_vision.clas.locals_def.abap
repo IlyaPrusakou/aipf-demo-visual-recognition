@@ -57,6 +57,14 @@ CLASS lcl_adf_create_cmr DEFINITION INHERITING FROM zpru_cl_abap_executor CREATE
     METHODS execute_code_int REDEFINITION.
 ENDCLASS.
 
+CLASS lcl_adf_classify_danger_goods DEFINITION
+      INHERITING FROM zpru_cl_abap_executor
+      CREATE PUBLIC.
+  PROTECTED SECTION.
+    METHODS execute_code_int REDEFINITION.
+ENDCLASS.
+
+
 CLASS lcl_adf_tool_provider DEFINITION INHERITING FROM zpru_cl_tool_provider CREATE PUBLIC.
   PROTECTED SECTION.
     METHODS provide_tool_instance REDEFINITION.

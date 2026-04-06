@@ -387,6 +387,11 @@ DATA(lv_raw_response) = |[| &&
     <ls_execution_plan>-sequence = 1.
     <ls_execution_plan>-toolname = 'CREATE_CMR'.
 
+    APPEND INITIAL LINE TO et_execution_plan ASSIGNING <ls_execution_plan>.
+    <ls_execution_plan>-agentuuid = is_agent-agentuuid.
+    <ls_execution_plan>-sequence  = 2.
+    <ls_execution_plan>-toolname  = 'CLASSIFY_DANGER_GOODS'.
+
     ev_langu = sy-langu.
 
   ENDMETHOD.
@@ -668,11 +673,242 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
+  METHOD execute_code_int.
+    TYPES: BEGIN OF ts_item,
+             cmruuid            TYPE zpru_cmr_item-cmruuid,
+             cmritemuuid        TYPE zpru_cmr_item-cmritemuuid,
+             cmrid              TYPE zpru_cmr_item-cmrid,
+             itemposition       TYPE zpru_cmr_item-itemposition,
+             natureofgoods      TYPE zpru_cmr_item-natureofgoods,
+             unitednationnumber TYPE zpru_cmr_item-unitednationnumber,
+             hazardclass        TYPE zpru_cmr_item-hazardclass,
+             packinggroup       TYPE zpru_cmr_item-packinggroup,
+           END OF ts_item,
+           tt_items TYPE STANDARD TABLE OF ts_item WITH EMPTY KEY.
+
+    TYPES: BEGIN OF ts_alert_out,
+             alertuuid     TYPE zpru_cmr_alert-alertuuid,
+             cmruuid       TYPE zpru_cmr_alert-cmruuid,
+             cmrid         TYPE zpru_cmr_alert-cmrid,
+             cmritemuuid   TYPE zpru_cmr_alert-cmritemuuid,
+             itemposition  TYPE zpru_cmr_alert-itemposition,
+             natureofgoods TYPE zpru_cmr_alert-natureofgoods,
+             alerttype     TYPE zpru_cmr_alert-alerttype,
+             alertmessage  TYPE zpru_cmr_alert-alertmessage,
+           END OF ts_alert_out,
+           tt_alerts_out TYPE STANDARD TABLE OF ts_alert_out WITH EMPTY KEY.
+
+    DATA lt_items      TYPE tt_items.
+    DATA lt_alerts_db  TYPE STANDARD TABLE OF zpru_cmr_alert WITH EMPTY KEY.
+    DATA lt_alerts_out TYPE tt_alerts_out.
+    DATA lv_items_json TYPE string.
+    DATA lv_nature_up  TYPE string.
+    DATA lv_is_danger  TYPE abap_bool.
+    DATA lv_reason     TYPE string.
+    DATA ls_alert_db   TYPE zpru_cmr_alert.
+    DATA ls_alert_out  TYPE ts_alert_out.
+
+    " --- Read CMRITEMS from controller data board (written by CREATE_CMR) ---
+    SORT io_controller->mt_input_output BY number ASCENDING.
+    LOOP AT io_controller->mt_input_output ASSIGNING FIELD-SYMBOL(<ls_io>).
+      READ TABLE <ls_io>-key_value_pairs WITH KEY name = 'CMRITEMS'
+           ASSIGNING FIELD-SYMBOL(<ls_kvp>).
+      IF sy-subrc = 0.
+        lv_items_json = <ls_kvp>-value.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_items_json IS INITIAL.
+      ev_error_flag = abap_true.
+      RETURN.
+    ENDIF.
+
+    /ui2/cl_json=>deserialize( EXPORTING json          = lv_items_json
+                                          hex_as_base64 = abap_false
+                               CHANGING  data          = lt_items ).
+
+    IF lt_items IS INITIAL.
+      APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_kv_empty>).
+      <ls_kv_empty>-name  = 'CMRALERTS'.
+      <ls_kv_empty>-value = '[]'.
+      RETURN.
+    ENDIF.
+
+    " --- Classify each item ---
+    LOOP AT lt_items ASSIGNING FIELD-SYMBOL(<ls_item>).
+      CLEAR: lv_is_danger, lv_reason.
+
+      " Trigger A: structured hazard fields already populated
+      IF <ls_item>-hazardclass IS NOT INITIAL.
+        lv_is_danger = abap_true.
+        lv_reason = |Hazard class { <ls_item>-hazardclass } detected|.
+      ENDIF.
+      IF lv_is_danger = abap_false AND <ls_item>-unitednationnumber IS NOT INITIAL.
+        lv_is_danger = abap_true.
+        lv_reason = |UN number { <ls_item>-unitednationnumber } present|.
+      ENDIF.
+
+      " Trigger B: keyword match on NatureOfGoods
+      IF lv_is_danger = abap_false.
+        lv_nature_up = to_upper( <ls_item>-natureofgoods ).
+
+        IF lv_nature_up CS 'EXPLOS'.
+          lv_is_danger = abap_true.
+          lv_reason = 'Explosive material detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'FLAMMABLE GAS'
+                                           OR lv_nature_up CS 'INFLAMMABLE GAS'
+                                           OR lv_nature_up CS 'LPG'
+                                           OR lv_nature_up CS 'LNG'
+                                           OR lv_nature_up CS 'COMPRESSED GAS'
+                                           OR lv_nature_up CS 'PROPANE'
+                                           OR lv_nature_up CS 'BUTANE'
+                                           OR lv_nature_up CS 'ACETYLENE'
+                                           OR lv_nature_up CS 'HYDROGEN' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Flammable gas detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'FLAMMABLE LIQUID'
+                                           OR lv_nature_up CS 'INFLAMMABLE LIQUID'
+                                           OR lv_nature_up CS 'PETROL'
+                                           OR lv_nature_up CS 'GASOLINE'
+                                           OR lv_nature_up CS 'DIESEL'
+                                           OR lv_nature_up CS 'KEROSENE'
+                                           OR lv_nature_up CS 'ETHANOL'
+                                           OR lv_nature_up CS 'METHANOL'
+                                           OR lv_nature_up CS 'ACETONE'
+                                           OR lv_nature_up CS 'BENZENE'
+                                           OR lv_nature_up CS 'TOLUENE'
+                                           OR lv_nature_up CS 'FUEL OIL' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Flammable liquid detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'FLAMMABLE SOLID'
+                                           OR lv_nature_up CS 'INFLAMMABLE SOLID'
+                                           OR lv_nature_up CS 'PHOSPHORUS'
+                                           OR lv_nature_up CS 'SULPHUR'
+                                           OR lv_nature_up CS 'SULFUR'
+                                           OR lv_nature_up CS 'MAGNESIUM'
+                                           OR lv_nature_up CS 'ALUMINIUM POWDER'
+                                           OR lv_nature_up CS 'ALUMINUM POWDER' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Flammable solid detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'OXIDIS'
+                                           OR lv_nature_up CS 'OXIDIZ'
+                                           OR lv_nature_up CS 'PEROXIDE'
+                                           OR lv_nature_up CS 'PERMANGANATE'
+                                           OR lv_nature_up CS 'CHLORATE'
+                                           OR lv_nature_up CS 'NITRATE'
+                                           OR lv_nature_up CS 'PERCHLORATE' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Oxidiser/organic peroxide detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'TOXIC'
+                                           OR lv_nature_up CS 'POISON'
+                                           OR lv_nature_up CS 'PESTICIDE'
+                                           OR lv_nature_up CS 'HERBICIDE'
+                                           OR lv_nature_up CS 'INSECTICIDE'
+                                           OR lv_nature_up CS 'CYANIDE'
+                                           OR lv_nature_up CS 'ARSENIC'
+                                           OR lv_nature_up CS 'MERCURY'
+                                           OR lv_nature_up CS 'CHLORINE'
+                                           OR lv_nature_up CS 'AMMONIA'
+                                           OR lv_nature_up CS 'FORMALDEHYDE' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Toxic substance detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'INFECTIOUS'
+                                           OR lv_nature_up CS 'PATHOGEN'
+                                           OR lv_nature_up CS 'CLINICAL WASTE'
+                                           OR lv_nature_up CS 'MEDICAL WASTE' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Infectious substance detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'RADIOACT'
+                                           OR lv_nature_up CS 'NUCLEAR'
+                                           OR lv_nature_up CS 'URANIUM'
+                                           OR lv_nature_up CS 'PLUTONIUM'
+                                           OR lv_nature_up CS 'ISOTOPE' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Radioactive material detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'CORROSIVE'
+                                           OR lv_nature_up CS 'ACID'
+                                           OR lv_nature_up CS 'CAUSTIC'
+                                           OR lv_nature_up CS 'SULPHURIC'
+                                           OR lv_nature_up CS 'SULFURIC'
+                                           OR lv_nature_up CS 'HYDROCHLORIC'
+                                           OR lv_nature_up CS 'SODIUM HYDROXIDE'
+                                           OR lv_nature_up CS 'POTASSIUM HYDROXIDE'
+                                           OR lv_nature_up CS 'BLEACH' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Corrosive substance detected in nature of goods'.
+        ENDIF.
+        IF lv_is_danger = abap_false AND (    lv_nature_up CS 'DANGEROUS GOODS'
+                                           OR lv_nature_up CS 'HAZARDOUS'
+                                           OR lv_nature_up CS 'LITHIUM BATTER'
+                                           OR lv_nature_up CS 'DRY ICE'
+                                           OR lv_nature_up CS 'MAGNETIS' ).
+          lv_is_danger = abap_true.
+          lv_reason = 'Hazardous material detected in nature of goods'.
+        ENDIF.
+      ENDIF.
+
+      IF lv_is_danger = abap_true.
+        CLEAR: ls_alert_db, ls_alert_out.
+
+        ls_alert_db-alertuuid    = cl_system_uuid=>create_uuid_x16_static( ).
+        ls_alert_db-cmruuid      = <ls_item>-cmruuid.
+        ls_alert_db-cmrid        = <ls_item>-cmrid.
+        ls_alert_db-cmritemuuid  = <ls_item>-cmritemuuid.
+        ls_alert_db-itemposition = <ls_item>-itemposition.
+        ls_alert_db-natureofgoods = <ls_item>-natureofgoods.
+        ls_alert_db-alerttype    = 'DANGER_GOODS'.
+        ls_alert_db-alertmessage = lv_reason.
+        ls_alert_db-createdby    = sy-uname.
+        GET TIME STAMP FIELD ls_alert_db-createdat.
+
+        APPEND ls_alert_db TO lt_alerts_db.
+
+        ls_alert_out-alertuuid    = ls_alert_db-alertuuid.
+        ls_alert_out-cmruuid      = ls_alert_db-cmruuid.
+        ls_alert_out-cmrid        = ls_alert_db-cmrid.
+        ls_alert_out-cmritemuuid  = ls_alert_db-cmritemuuid.
+        ls_alert_out-itemposition = ls_alert_db-itemposition.
+        ls_alert_out-natureofgoods = ls_alert_db-natureofgoods.
+        ls_alert_out-alerttype    = ls_alert_db-alerttype.
+        ls_alert_out-alertmessage = ls_alert_db-alertmessage.
+        APPEND ls_alert_out TO lt_alerts_out.
+      ENDIF.
+    ENDLOOP.
+
+    " --- Persist alerts ---
+    IF lt_alerts_db IS NOT INITIAL.
+      INSERT zpru_cmr_alert FROM TABLE @lt_alerts_db ACCEPTING DUPLICATE KEYS.
+      IF sy-subrc <> 0 AND sy-subrc <> 4.
+        ev_error_flag = abap_true.
+        RETURN.
+      ENDIF.
+    ENDIF.
+
+    " --- Emit output key-value pair ---
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_kv>).
+    <ls_kv>-name  = 'CMRALERTS'.
+    <ls_kv>-value = /ui2/cl_json=>serialize( data     = lt_alerts_out
+                                              compress = abap_true ).
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS lcl_adf_tool_provider IMPLEMENTATION.
   METHOD provide_tool_instance.
     CASE is_tool_master_data-toolname.
       WHEN `CREATE_CMR`.
         ro_executor = NEW lcl_adf_create_cmr( ).
+      WHEN `CLASSIFY_DANGER_GOODS`.
+        ro_executor = NEW lcl_adf_classify_danger_goods( ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
@@ -697,6 +933,8 @@ CLASS lcl_adf_schema_provider IMPLEMENTATION.
     CASE is_tool_master_data-toolname.
       WHEN `CREATE_CMR`.
         ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `ZPRU_S_CMR_CREATE_REQUEST` ).
+      WHEN `CLASSIFY_DANGER_GOODS`.
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `ZPRU_S_CMR_CLASSIFY_REQ` ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
