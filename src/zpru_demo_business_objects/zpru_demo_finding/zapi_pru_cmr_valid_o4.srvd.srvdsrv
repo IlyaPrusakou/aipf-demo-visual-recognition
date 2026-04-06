@@ -1,0 +1,11 @@
+@EndUserText: {
+  label: 'Service Definition for ZC_PRU_CMR_VALID'
+}
+@ObjectModel: {
+  leadingEntity: {
+    name: 'ZC_PRU_CMR_VALID'
+  }
+}
+define service ZAPI_PRU_CMR_VALID_O4 provider contracts odata_v4_webapi {
+  expose ZC_PRU_CMR_VALID;
+}

@@ -1,0 +1,40 @@
+managed implementation in class ZBP_R_PRU_CMR_VALID unique;
+strict ( 2 );
+extensible;
+define behavior for ZR_PRU_CMR_VALID alias ZrPruCmrValid
+persistent table ZPRU_CMR_VALID
+extensible
+lock master
+authorization master( global )
+{
+  field ( mandatory : create )
+   Findinguuid;
+
+  field ( readonly )
+   Createdby,
+   Createdat;
+
+  field ( readonly : update )
+   Findinguuid;
+
+
+  create;
+  update;
+  delete;
+
+  mapping for ZPRU_CMR_VALID corresponding extensible
+  {
+    Findinguuid = FINDINGUUID;
+    Cmruuid = CMRUUID;
+    Cmrid = CMRID;
+    Cmritemuuid = CMRITEMUUID;
+    Itemposition = ITEMPOSITION;
+    Findingstatus = FINDINGSTATUS;
+    Findingtype = FINDINGTYPE;
+    Fieldname = FIELDNAME;
+    Findingmsg = FINDINGMSG;
+    Createdby = CREATEDBY;
+    Createdat = CREATEDAT;
+  }
+
+}
