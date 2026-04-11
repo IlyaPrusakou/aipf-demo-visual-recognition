@@ -1,0 +1,167 @@
+@Metadata.layer: #CORE
+@UI.headerInfo.title.type: #STANDARD
+@UI.headerInfo.title.value: 'BinID'
+@UI.headerInfo.description.type: #STANDARD
+@UI.headerInfo.description.value: 'BinID'
+annotate view ZPRUC_STORBIN with
+{
+  @EndUserText.label: 'UUID'
+  @UI.identification: [ {
+    position: 10 , 
+    label: 'UUID'
+  } ]
+  @UI.lineItem: [ {
+    position: 10 , 
+    label: 'UUID'
+  } ]
+  @UI.selectionField: [ {
+    position: 10 
+  } ]
+  UUID;
+  
+  @EndUserText.label: 'BinID'
+  @UI.facet: [ {
+    label: 'General Information', 
+    id: 'GeneralInfo', 
+    purpose: #STANDARD, 
+    position: 20 , 
+    type: #IDENTIFICATION_REFERENCE
+  } ]
+  @UI.identification: [ {
+    position: 20 , 
+    label: 'BinID'
+  } ]
+  @UI.lineItem: [ {
+    position: 20 , 
+    label: 'BinID'
+  } ]
+  @UI.selectionField: [ {
+    position: 20 
+  } ]
+  BinID;
+  
+  @EndUserText.label: 'BinType'
+  @UI.identification: [ {
+    position: 30 , 
+    label: 'BinType'
+  } ]
+  @UI.lineItem: [ {
+    position: 30 , 
+    label: 'BinType'
+  } ]
+  @UI.selectionField: [ {
+    position: 30 
+  } ]
+  BinType;
+  
+  @EndUserText.label: 'IsBlocked'
+  @UI.identification: [ {
+    position: 40 , 
+    label: 'IsBlocked'
+  } ]
+  @UI.lineItem: [ {
+    position: 40 , 
+    label: 'IsBlocked'
+  } ]
+  @UI.selectionField: [ {
+    position: 40 
+  } ]
+  IsBlocked;
+  
+  @EndUserText.label: 'CukyField'
+  @UI.identification: [ {
+    position: 50 , 
+    label: 'CukyField'
+  } ]
+  @UI.lineItem: [ {
+    position: 50 , 
+    label: 'CukyField'
+  } ]
+  @UI.selectionField: [ {
+    position: 50 
+  } ]
+  CukyField;
+  
+  @EndUserText.label: 'MaxWeight'
+  @UI.identification: [ {
+    position: 60 , 
+    label: 'MaxWeight'
+  } ]
+  @UI.lineItem: [ {
+    position: 60 , 
+    label: 'MaxWeight'
+  } ]
+  @UI.selectionField: [ {
+    position: 60 
+  } ]
+  MaxWeight;
+  
+  @UI.identification: [ {
+    position: 70 
+  } ]
+  @UI.lineItem: [ {
+    position: 70 
+  } ]
+  @UI.selectionField: [ {
+    position: 70 
+  } ]
+  LocalCreatedBy;
+  
+  @UI.identification: [ {
+    position: 80 
+  } ]
+  @UI.lineItem: [ {
+    position: 80 
+  } ]
+  @UI.selectionField: [ {
+    position: 80 
+  } ]
+  LocalCreatedAt;
+  
+  @UI.identification: [ {
+    position: 90 
+  } ]
+  @UI.lineItem: [ {
+    position: 90 
+  } ]
+  @UI.selectionField: [ {
+    position: 90 
+  } ]
+  LocalLastChangedBy;
+  
+  @UI.identification: [ {
+    position: 100 
+  } ]
+  @UI.lineItem: [ {
+    position: 100 
+  } ]
+  @UI.selectionField: [ {
+    position: 100 
+  } ]
+  LocalLastChangedAt;
+  
+  @UI.identification: [ {
+    position: 110 
+  } ]
+  @UI.lineItem: [ {
+    position: 110 
+  } ]
+  @UI.selectionField: [ {
+    position: 110 
+  } ]
+  LastChangedAt;
+  
+  @EndUserText.label: '_BaseEntity'
+  @UI.identification: [ {
+    position: 120 , 
+    label: '_BaseEntity'
+  } ]
+  @UI.lineItem: [ {
+    position: 120 , 
+    label: '_BaseEntity'
+  } ]
+  @UI.selectionField: [ {
+    position: 120 
+  } ]
+  _BaseEntity;
+}

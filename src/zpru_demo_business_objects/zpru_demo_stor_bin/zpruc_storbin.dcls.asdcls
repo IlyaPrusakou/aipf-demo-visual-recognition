@@ -1,0 +1,6 @@
+@EndUserText.label: 'ZPRUC_STORBIN'
+@MappingRole: true
+define role ZPRUC_STORBIN {
+  grant select on ZPRUC_STORBIN
+  where INHERITING CONDITIONS FROM ENTITY ZPRUR_STORBIN REPLACING { ROOT WITH _BaseEntity };
+}

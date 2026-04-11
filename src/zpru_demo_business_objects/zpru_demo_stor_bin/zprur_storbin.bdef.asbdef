@@ -1,0 +1,51 @@
+managed implementation in class ZPRUBP_R_STORBIN unique;
+strict ( 2 );
+with draft;
+extensible;
+define behavior for ZPRUR_STORBIN alias STORBIN
+persistent table ZPRUSTORBIN
+extensible
+draft table ZPRUSTORBIN_D
+etag master LocalLastChangedAt
+lock master total etag LastChangedAt
+authorization master( global )
+{
+  field ( readonly )
+   UUID,
+   LocalCreatedBy,
+   LocalCreatedAt,
+   LocalLastChangedBy,
+   LocalLastChangedAt,
+   LastChangedAt;
+
+  field ( numbering : managed )
+   UUID;
+
+
+  create;
+  update;
+  delete;
+
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Edit;
+  draft action Resume;
+  draft determine action Prepare;
+
+  mapping for ZPRUSTORBIN corresponding extensible
+  {
+    UUID = UUID;
+    BinID = BIN_ID;
+    BinType = BIN_TYPE;
+    IsBlocked = IS_BLOCKED;
+    CukyField = CUKY_FIELD;
+    MaxWeight = MAX_WEIGHT;
+    WeightUnit = WEIGHT_UNIT;
+    LocalCreatedBy = LOCAL_CREATED_BY;
+    LocalCreatedAt = LOCAL_CREATED_AT;
+    LocalLastChangedBy = LOCAL_LAST_CHANGED_BY;
+    LocalLastChangedAt = LOCAL_LAST_CHANGED_AT;
+    LastChangedAt = LAST_CHANGED_AT;
+  }
+
+}

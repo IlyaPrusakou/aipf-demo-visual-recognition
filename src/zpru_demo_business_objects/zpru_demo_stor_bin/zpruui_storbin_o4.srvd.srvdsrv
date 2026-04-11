@@ -1,0 +1,11 @@
+@EndUserText: {
+  label: 'Service Definition for ZPRUC_STORBIN'
+}
+@ObjectModel: {
+  leadingEntity: {
+    name: 'ZPRUC_STORBIN'
+  }
+}
+define service ZPRUUI_STORBIN_O4 provider contracts odata_v4_ui {
+  expose ZPRUC_STORBIN as STORBIN;
+}
