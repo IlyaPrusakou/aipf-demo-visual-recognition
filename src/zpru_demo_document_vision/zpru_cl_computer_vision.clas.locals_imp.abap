@@ -1585,6 +1585,136 @@ CLASS lcl_adf_find_storage_bin IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
+  METHOD execute_code_int.
+    DATA lt_inb_headers         TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
+    DATA lt_inb_items           TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
+    DATA lt_storage_bins        TYPE zpru_if_computer_vision=>tt_storage_bin_context.
+    DATA lt_warehouse_tasks_rap TYPE TABLE FOR CREATE zprur_task\\task.
+    DATA lt_warehouse_tasks_out TYPE zpru_if_computer_vision=>tt_warehouse_task_context.
+    DATA lt_created_tasks       TYPE STANDARD TABLE OF zprutask WITH EMPTY KEY.
+    DATA lv_task_counter        TYPE i VALUE 1.
+    DATA lv_max_tanum           TYPE char10.
+
+    FIELD-SYMBOLS <ls_input> TYPE zpru_if_computer_vision=>ts_create_warehouse_task_request.
+
+    ASSIGN is_input->* TO <ls_input>.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDIF.
+
+    " Deserialize input context data
+    IF <ls_input>-inbdeliveryheaders IS NOT INITIAL.
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-inbdeliveryheaders
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_inb_headers ).
+    ENDIF.
+
+    IF <ls_input>-inbdeliveryitems IS NOT INITIAL.
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-inbdeliveryitems
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_inb_items ).
+    ENDIF.
+
+    IF <ls_input>-storagebins IS NOT INITIAL.
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-storagebins
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_storage_bins ).
+    ENDIF.
+
+    " Get next task number
+    SELECT MAX( tanum ) FROM zprur_task
+      INTO @lv_max_tanum.
+    DATA(lv_next_tanum_num) = CONV i( lv_max_tanum ) + 1.
+
+    " Create warehouse tasks for each inbound delivery item
+    LOOP AT lt_inb_items ASSIGNING FIELD-SYMBOL(<ls_inb_item>).
+      " Find the corresponding header for delivery ID
+      READ TABLE lt_inb_headers ASSIGNING FIELD-SYMBOL(<ls_inb_header>)
+        WITH KEY uuid = <ls_inb_item>-parent_uuid.
+      IF sy-subrc <> 0.
+        CONTINUE.
+      ENDIF.
+
+      " Find an available storage bin (unblocked) for destination
+      READ TABLE lt_storage_bins ASSIGNING FIELD-SYMBOL(<ls_storage_bin>)
+        WITH KEY is_blocked = abap_false.
+      IF sy-subrc <> 0.
+        " No unblocked storage bin found, use default
+        CONTINUE.
+      ENDIF.
+
+      APPEND INITIAL LINE TO lt_warehouse_tasks_rap ASSIGNING FIELD-SYMBOL(<ls_task_rap>).
+      TRY.
+          <ls_task_rap>-uuid = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+      <ls_task_rap>-%cid = |TASK{ lv_task_counter }|.
+      <ls_task_rap>-tanum = |T{ lv_next_tanum_num }|.
+      <ls_task_rap>-deliveryid = <ls_inb_header>-deliveryid.
+      <ls_task_rap>-itempos = <ls_inb_item>-itempos.
+      <ls_task_rap>-material = <ls_inb_item>-material.
+      <ls_task_rap>-quantity = <ls_inb_item>-quantity.
+      <ls_task_rap>-unit = <ls_inb_item>-unit.
+      " Use 'RECEIVING' as source bin (goods arrive here)
+      <ls_task_rap>-sourcebin = 'RECEIVING'.
+      <ls_task_rap>-destbin = <ls_storage_bin>-bin_id.
+      <ls_task_rap>-confstatus = 'OPEN'.
+      GET TIME STAMP FIELD <ls_task_rap>-createdat.
+      <ls_task_rap>-%control = VALUE #( uuid       = if_abap_behv=>mk-on
+                                        tanum      = if_abap_behv=>mk-on
+                                        deliveryid = if_abap_behv=>mk-on
+                                        itempos    = if_abap_behv=>mk-on
+                                        material   = if_abap_behv=>mk-on
+                                        quantity   = if_abap_behv=>mk-on
+                                        unit       = if_abap_behv=>mk-on
+                                        sourcebin  = if_abap_behv=>mk-on
+                                        destbin    = if_abap_behv=>mk-on
+                                        confstatus = if_abap_behv=>mk-on
+                                        createdat  = if_abap_behv=>mk-on ).
+
+      lv_task_counter += 1.
+      lv_next_tanum_num += 1.
+    ENDLOOP.
+
+    IF lt_warehouse_tasks_rap IS INITIAL.
+      " No tasks created - return empty output
+      APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_kv_empty>).
+      <ls_kv_empty>-name  = zpru_if_computer_vision=>cs_context_field-warehousetasks-field_name.
+      <ls_kv_empty>-value = ``.
+      RETURN.
+    ENDIF.
+
+    " Persist warehouse tasks
+    MODIFY ENTITIES OF zprur_task
+           ENTITY task
+           CREATE FROM lt_warehouse_tasks_rap
+           MAPPED DATA(ls_mapped)
+           FAILED DATA(ls_failed)
+           REPORTED DATA(ls_reported).
+
+    IF ls_failed IS NOT INITIAL.
+      ev_error_flag = abap_true.
+      RETURN.
+    ENDIF.
+
+    " Read back created tasks
+    READ ENTITIES OF zprur_task
+         ENTITY task
+         ALL FIELDS WITH CORRESPONDING #( ls_mapped-task )
+         RESULT DATA(lt_created_tasks_rap).
+
+    lt_warehouse_tasks_out = CORRESPONDING #( lt_created_tasks_rap MAPPING FROM ENTITY ).
+
+    " Output the created warehouse tasks
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_kv>).
+    <ls_kv>-name  = zpru_if_computer_vision=>cs_context_field-warehousetasks-field_name.
+    <ls_kv>-value = /ui2/cl_json=>serialize( data     = lt_warehouse_tasks_out
+                                             compress = abap_true ).
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS lcl_adf_tool_provider IMPLEMENTATION.
   METHOD provide_tool_instance.
     CASE is_tool_master_data-toolname.
@@ -1596,8 +1726,10 @@ CLASS lcl_adf_tool_provider IMPLEMENTATION.
         ro_executor = NEW lcl_adf_validate_cmr( ).
       WHEN `CREATE_INB_DELIVERY`.
         ro_executor = NEW lcl_adf_create_inb_delivery( ).
-      WHEN `FIND_STORAGE_BIN`.
+       WHEN `FIND_STORAGE_BIN`.
         ro_executor = NEW lcl_adf_find_storage_bin( ).
+       WHEN `CREATE_WAREHOUSE_TASK`.
+        ro_executor = NEW lcl_adf_create_warehouse_task( ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
@@ -1632,10 +1764,13 @@ CLASS lcl_adf_schema_provider IMPLEMENTATION.
       WHEN `CREATE_INB_DELIVERY`.
         ro_structure_schema ?= cl_abap_structdescr=>describe_by_name(
                                    p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_INB_DELIVERY_CREATE_REQUEST` ).
-      WHEN `FIND_STORAGE_BIN`.
+       WHEN `FIND_STORAGE_BIN`.
         ro_structure_schema ?= cl_abap_structdescr=>describe_by_name(
                                    p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_FIND_STORAGE_BIN_REQUEST` ).
-      WHEN OTHERS.
+       WHEN `CREATE_WAREHOUSE_TASK`.
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name(
+                                   p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CREATE_WAREHOUSE_TASK_REQUEST` ).
+       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
   ENDMETHOD.

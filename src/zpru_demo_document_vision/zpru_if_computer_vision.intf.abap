@@ -52,6 +52,10 @@ INTERFACE zpru_if_computer_vision
                  field_name    TYPE string VALUE `STORAGEBINS`,
                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_STORAGE_BIN_CONTEXT`,
                END OF storagebins,
+               BEGIN OF warehousetasks,
+                 field_name    TYPE string VALUE `WAREHOUSETASKS`,
+                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_WAREHOUSE_TASK_CONTEXT`,
+               END OF warehousetasks,
              END OF cs_context_field.
 
   CONSTANTS: BEGIN OF cs_tools,
@@ -60,6 +64,7 @@ INTERFACE zpru_if_computer_vision
                  validate_cmr          TYPE string VALUE `VALIDATE_CMR`,
                  create_inb_delivery   TYPE string VALUE `CREATE_INB_DELIVERY`,
                  find_storage_bin      TYPE string VALUE `FIND_STORAGE_BIN`,
+                 create_warehouse_task TYPE string VALUE `CREATE_WAREHOUSE_TASK`,
                END OF cs_tools.
 
   CONSTANTS: BEGIN OF cs_input_tool_structure,
@@ -75,10 +80,13 @@ INTERFACE zpru_if_computer_vision
                BEGIN OF create_inb_delivery,
                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_INB_DELIVERY_CREATE_REQUEST`,
                END OF create_inb_delivery,
-               BEGIN OF find_storage_bin,
-                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_FIND_STORAGE_BIN_REQUEST`,
-               END OF find_storage_bin,
-             END OF cs_input_tool_structure.
+                BEGIN OF find_storage_bin,
+                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_FIND_STORAGE_BIN_REQUEST`,
+                END OF find_storage_bin,
+                BEGIN OF create_warehouse_task,
+                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CREATE_WAREHOUSE_TASK_REQUEST`,
+                END OF create_warehouse_task,
+              END OF cs_input_tool_structure.
 
   CONSTANTS: BEGIN OF cs_input_context_fields,
                BEGIN OF create_cmr,
@@ -103,6 +111,11 @@ INTERFACE zpru_if_computer_vision
                   inbdeliveryheaders  TYPE string VALUE `INBDELIVERYHEADERS`,
                   inbdeliveryitems    TYPE string VALUE `INBDELIVERYITEMS`,
                 END OF find_storage_bin,
+                BEGIN OF create_warehouse_task,
+                  inbdeliveryheaders TYPE string VALUE `INBDELIVERYHEADERS`,
+                  inbdeliveryitems   TYPE string VALUE `INBDELIVERYITEMS`,
+                  storagebins        TYPE string VALUE `STORAGEBINS`,
+                END OF create_warehouse_task,
               END OF cs_input_context_fields.
 
   CONSTANTS: BEGIN OF cs_output_context_fields,
@@ -126,6 +139,9 @@ INTERFACE zpru_if_computer_vision
                BEGIN OF find_storage_bin,
                  storagebins TYPE string VALUE `STORAGEBINS`,
                END OF find_storage_bin,
+               BEGIN OF create_warehouse_task,
+                 warehousetasks TYPE string VALUE `WAREHOUSETASKS`,
+               END OF create_warehouse_task,
              END OF cs_output_context_fields.
 
   " CONTEXT
@@ -171,6 +187,15 @@ INTERFACE zpru_if_computer_vision
       inbdeliveryitems    TYPE string,
     END OF ts_find_storage_bin_request,
     tt_find_storage_bin_request TYPE STANDARD TABLE OF ts_find_storage_bin_request WITH EMPTY KEY.
+
+  " 6 INPUT FOR TOOL 'CREATE_WAREHOUSE_TASK'
+  TYPES:
+    BEGIN OF ts_create_warehouse_task_request,
+      inbdeliveryheaders TYPE string,
+      inbdeliveryitems   TYPE string,
+      storagebins        TYPE string,
+    END OF ts_create_warehouse_task_request,
+    tt_create_warehouse_task_request TYPE STANDARD TABLE OF ts_create_warehouse_task_request WITH EMPTY KEY.
 
   " CONTEXT FIELDS
   " CONTEXT FIELD 'CMRALERTS'
@@ -227,5 +252,9 @@ INTERFACE zpru_if_computer_vision
   " CONTEXT FIELD 'STORAGEBINS'
   TYPES ts_storage_bin_context TYPE ZPRUSTORBIN.
   TYPES tt_storage_bin_context TYPE STANDARD TABLE OF ts_storage_bin_context WITH EMPTY KEY.
+
+  " CONTEXT FIELD 'WAREHOUSETASKS'
+  TYPES ts_warehouse_task_context TYPE ZPRUTASK.
+  TYPES tt_warehouse_task_context TYPE STANDARD TABLE OF ts_warehouse_task_context WITH EMPTY KEY.
 
 ENDINTERFACE.
