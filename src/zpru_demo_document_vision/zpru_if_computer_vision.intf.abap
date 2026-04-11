@@ -11,6 +11,45 @@ INTERFACE zpru_if_computer_vision
   INTERFACES zpru_if_tool_info_provider.
   INTERFACES zpru_if_agent_singleton_meth.
 
+  CONSTANTS: BEGIN OF cs_input_tool_structure,
+               BEGIN OF create_cmr,
+                 input_type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_CREATE_REQUEST`,
+               END OF create_cmr,
+               BEGIN OF classify_danger_goods,
+                 input_type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_CLASSIFY_REQ`,
+               END OF classify_danger_goods,
+               BEGIN OF validate_cmr,
+                 input_type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_VALIDATE_REQ`,
+               END OF validate_cmr,
+             END OF cs_input_tool_structure.
+
+  CONSTANTS: BEGIN OF cs_context_field,
+               BEGIN OF cmralerts,
+                 name TYPE string VALUE `CMRALERTS`,
+                 type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_CMR_ALERT_CONTEXT`,
+               END OF cmralerts,
+               BEGIN OF cmrheaders,
+                 name TYPE string VALUE `CMRHEADERS`,
+                 type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_CMR_HEADER_CONTEXT`,
+               END OF cmrheaders,
+               BEGIN OF cmritems,
+                 name TYPE string VALUE `CMRITEMS`,
+                 type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_CMR_ITEM_CONTEXT`,
+               END OF cmritems,
+               BEGIN OF cmrcreationcontent,
+                 name TYPE string VALUE `CMRCREATIONCONTENT`,
+                 type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_CMR_CREATE_CONTENT`,
+               END OF cmrcreationcontent,
+               BEGIN OF cmrstatus,
+                 name TYPE string VALUE `CMRSTATUS`,
+                 type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_CMR_OVERALL_STATUS`,
+               END OF cmrstatus,
+               BEGIN OF cmrfinding,
+                 name TYPE string VALUE `CMRFINDING`,
+                 type TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_CMR_FINDING`,
+               END OF cmrfinding,
+             END OF cs_context_field.
+
   " CONTEXT
   " TOOL INPUT TYPE
   " 1 INPUT FOR TOOL 'CREATE_CMR'
@@ -40,8 +79,8 @@ INTERFACE zpru_if_computer_vision
 
   " CONTEXT FIELDS
   " CONTEXT FIELD 'CMRALERTS'
-  TYPES: ts_cmr_alert_context TYPE zpru_cmr_alert.
-  TYPES: tt_cmr_alert_context TYPE STANDARD TABLE OF ts_cmr_alert_context WITH EMPTY KEY.
+  TYPES ts_cmr_alert_context  TYPE zpru_cmr_alert.
+  TYPES tt_cmr_alert_context  TYPE STANDARD TABLE OF ts_cmr_alert_context WITH EMPTY KEY.
 
   " CONTEXT FIELD 'CMRHEADERS'
   TYPES ts_cmr_header_context TYPE zpru_cmr_header.
@@ -70,7 +109,7 @@ INTERFACE zpru_if_computer_vision
     tt_cmr_overall_status TYPE STANDARD TABLE OF ts_cmr_overall_status WITH EMPTY KEY.
 
   " CONTEXT FIELD 'CMRFINDING'
-  TYPES: ts_cmr_finding TYPE zpru_cmr_valid.
-  TYPES: tt_cmr_finding TYPE STANDARD TABLE OF  ts_cmr_finding WITH EMPTY KEY.
+  TYPES ts_cmr_finding TYPE zpru_cmr_valid.
+  TYPES tt_cmr_finding TYPE STANDARD TABLE OF ts_cmr_finding WITH EMPTY KEY.
 
 ENDINTERFACE.
