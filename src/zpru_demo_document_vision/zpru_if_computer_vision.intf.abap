@@ -36,13 +36,26 @@ INTERFACE zpru_if_computer_vision
                  field_name    TYPE string VALUE `CMRFINDING`,
                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_CMR_FINDING`,
                END OF cmrfinding,
+               BEGIN OF inbdeliveryheaders,
+                 field_name    TYPE string VALUE `INBDELIVERYHEADERS`,
+                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_INB_DELIVERY_HEADER_CONTEXT`,
+               END OF inbdeliveryheaders,
+               BEGIN OF inbdeliveryitems,
+                 field_name    TYPE string VALUE `INBDELIVERYITEMS`,
+                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_INB_DELIVERY_ITEM_CONTEXT`,
+               END OF inbdeliveryitems,
+               BEGIN OF inbdeliverycreationcontent,
+                 field_name    TYPE string VALUE `INBDELIVERYCREATIONCONTENT`,
+                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_INB_DELIVERY_CREATE_CONTENT`,
+               END OF inbdeliverycreationcontent,
              END OF cs_context_field.
 
   CONSTANTS: BEGIN OF cs_tools,
-               create_cmr            TYPE string VALUE `CREATE_CMR`,
-               classify_danger_goods TYPE string VALUE `CLASSIFY_DANGER_GOODS`,
-               validate_cmr          TYPE string VALUE `VALIDATE_CMR`,
-             END OF cs_tools.
+                create_cmr            TYPE string VALUE `CREATE_CMR`,
+                classify_danger_goods TYPE string VALUE `CLASSIFY_DANGER_GOODS`,
+                validate_cmr          TYPE string VALUE `VALIDATE_CMR`,
+                create_inb_delivery   TYPE string VALUE `CREATE_INB_DELIVERY`,
+              END OF cs_tools.
 
   CONSTANTS: BEGIN OF cs_input_tool_structure,
                BEGIN OF create_cmr,
@@ -54,6 +67,9 @@ INTERFACE zpru_if_computer_vision
                BEGIN OF validate_cmr,
                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_VALIDATE_REQ`,
                END OF validate_cmr,
+               BEGIN OF create_inb_delivery,
+                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_INB_DELIVERY_CREATE_REQUEST`,
+               END OF create_inb_delivery,
              END OF cs_input_tool_structure.
 
   CONSTANTS: BEGIN OF cs_input_context_fields,
@@ -70,6 +86,9 @@ INTERFACE zpru_if_computer_vision
                  cmritems           TYPE string VALUE `CMRITEMS`,
                  cmrcreationcontent TYPE string VALUE `CMRCREATIONCONTENT`,
                END OF validate_cmr,
+               BEGIN OF create_inb_delivery,
+                 inbdeliverycreationcontent TYPE string VALUE `INBDELIVERYCREATIONCONTENT`,
+               END OF create_inb_delivery,
              END OF cs_input_context_fields.
 
   CONSTANTS: BEGIN OF cs_output_context_fields,
@@ -85,6 +104,11 @@ INTERFACE zpru_if_computer_vision
                  cmrstatus  TYPE string VALUE `CMRSTATUS`,
                  cmrfinding TYPE string VALUE `CMRFINDING`,
                END OF validate_cmr,
+               BEGIN OF create_inb_delivery,
+                 inbdeliveryheaders         TYPE string VALUE `INBDELIVERYHEADERS`,
+                 inbdeliveryitems           TYPE string VALUE `INBDELIVERYITEMS`,
+                 inbdeliverycreationcontent TYPE string VALUE `INBDELIVERYCREATIONCONTENT`,
+               END OF create_inb_delivery,
              END OF cs_output_context_fields.
 
   " CONTEXT
@@ -148,5 +172,29 @@ INTERFACE zpru_if_computer_vision
   " CONTEXT FIELD 'CMRFINDING'
   TYPES ts_cmr_finding TYPE zpru_cmr_valid.
   TYPES tt_cmr_finding TYPE STANDARD TABLE OF ts_cmr_finding WITH EMPTY KEY.
+
+  " CONTEXT FIELD 'INBDELIVERYHEADERS'
+  TYPES ts_inb_delivery_header_context TYPE zpruinbhdr.
+  TYPES tt_inb_delivery_header_context TYPE STANDARD TABLE OF ts_inb_delivery_header_context WITH EMPTY KEY.
+
+  " CONTEXT FIELD 'INBDELIVERYITEMS'
+  TYPES ts_inb_delivery_item_context TYPE zpruinbitm.
+  TYPES tt_inb_delivery_item_context TYPE STANDARD TABLE OF ts_inb_delivery_item_context WITH EMPTY KEY.
+
+  " CONTEXT FIELD 'INBDELIVERYCREATIONCONTENT'
+  TYPES:
+    BEGIN OF ts_inb_delivery_create_content,
+      message               TYPE string,
+      inbdeliveryheaders    TYPE tt_inb_delivery_header_context,
+      inbdeliveryitems      TYPE tt_inb_delivery_item_context,
+    END OF ts_inb_delivery_create_content.
+  TYPES tt_inb_delivery_create_content TYPE STANDARD TABLE OF ts_inb_delivery_create_content WITH EMPTY KEY.
+
+  " 4 INPUT FOR TOOL 'CREATE_INB_DELIVERY'
+  TYPES:
+    BEGIN OF ts_inb_delivery_create_request,
+      inbdeliverycreationcontent TYPE string,
+    END OF ts_inb_delivery_create_request,
+    tt_inb_delivery_create_request TYPE STANDARD TABLE OF ts_inb_delivery_create_request WITH EMPTY KEY.
 
 ENDINTERFACE.

@@ -1411,6 +1411,115 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
+  METHOD execute_code_int.
+    DATA lt_headers_all               TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
+    DATA lt_items_all                 TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
+    DATA lt_inb_delivery_create_head  TYPE TABLE FOR CREATE zprur_inbhdr\\inbhdr.
+    DATA lt_inb_delivery_create_item  TYPE TABLE FOR CREATE zprur_inbhdr\\inbhdr\_inbitm.
+    DATA lt_inb_delivery_header_ctx   TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
+    DATA lt_inb_delivery_item_ctx     TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
+    DATA lt_creation_content          TYPE zpru_if_computer_vision=>tt_inb_delivery_create_content.
+
+    FIELD-SYMBOLS <ls_inb_delivery_create> TYPE zpru_if_computer_vision=>ts_inb_delivery_create_request.
+
+    ASSIGN is_input->* TO <ls_inb_delivery_create>.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDIF.
+    /ui2/cl_json=>deserialize( EXPORTING json = <ls_inb_delivery_create>-inbdeliverycreationcontent
+                               CHANGING  data = lt_creation_content ).
+
+    LOOP AT lt_creation_content ASSIGNING FIELD-SYMBOL(<ls_creation_content>).
+      lt_headers_all = CORRESPONDING #( BASE ( lt_headers_all ) <ls_creation_content>-inbdeliveryheaders ).
+      lt_items_all = CORRESPONDING #( BASE ( lt_items_all ) <ls_creation_content>-inbdeliveryitems ).
+    ENDLOOP.
+
+    SELECT MAX( deliveryid ) FROM zprur_inbhdr
+      INTO @DATA(lv_max_deliveryid).
+
+    DATA(lv_next_deliveryid_num) = CONV i( lv_max_deliveryid ) + 1.
+
+    LOOP AT lt_headers_all ASSIGNING FIELD-SYMBOL(<ls_header>).
+      <ls_header>-deliveryid = |DL{ lv_next_deliveryid_num }|.
+
+      LOOP AT lt_items_all ASSIGNING FIELD-SYMBOL(<ls_item>)
+           WHERE parent_uuid = <ls_header>-uuid.
+        <ls_item>-deliveryid = <ls_header>-deliveryid.
+      ENDLOOP.
+
+      lv_next_deliveryid_num += 1.
+    ENDLOOP.
+
+    DATA(lv_item_cid) = 1.
+    LOOP AT lt_headers_all ASSIGNING FIELD-SYMBOL(<ls_header_entity>).
+
+      APPEND INITIAL LINE TO lt_inb_delivery_create_head ASSIGNING FIELD-SYMBOL(<ls_create_head>).
+      <ls_create_head> = CORRESPONDING #( <ls_header_entity> MAPPING TO ENTITY CHANGING CONTROL ).
+      <ls_create_head>-%cid = '1'.
+
+      LOOP AT lt_items_all ASSIGNING FIELD-SYMBOL(<ls_item_entity>)
+           WHERE parent_uuid = <ls_header_entity>-uuid.
+        APPEND INITIAL LINE TO lt_inb_delivery_create_item ASSIGNING FIELD-SYMBOL(<ls_create_item>).
+        <ls_create_item>-%cid_ref = '1'.
+        APPEND INITIAL LINE TO <ls_create_item>-%target ASSIGNING FIELD-SYMBOL(<ls_item_target>).
+        <ls_item_target> = CORRESPONDING #( <ls_item_entity> MAPPING TO ENTITY CHANGING CONTROL ).
+        <ls_item_target>-%cid = lv_item_cid.
+
+        lv_item_cid += 1.
+      ENDLOOP.
+    ENDLOOP.
+
+    IF lt_inb_delivery_create_head IS INITIAL.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDIF.
+
+    MODIFY ENTITIES OF zprur_inbhdr
+           ENTITY inbhdr
+           CREATE FROM lt_inb_delivery_create_head
+           ENTITY inbhdr
+           CREATE BY \_inbitm
+           FROM lt_inb_delivery_create_item
+           MAPPED DATA(ls_mapped)
+           FAILED DATA(ls_failed)
+           REPORTED DATA(ls_reported).
+
+    IF ls_failed IS NOT INITIAL.
+      ev_error_flag = abap_true.
+      RETURN.
+    ENDIF.
+
+    READ ENTITIES OF zprur_inbhdr
+         ENTITY inbhdr
+         ALL FIELDS WITH CORRESPONDING #( ls_mapped-inbhdr )
+         RESULT DATA(lt_new_inb_headers).
+
+    READ ENTITIES OF zprur_inbhdr
+         ENTITY inbitm
+         ALL FIELDS WITH CORRESPONDING #( ls_mapped-inbitm )
+         RESULT DATA(lt_new_inb_items).
+
+    lt_inb_delivery_header_ctx = CORRESPONDING #( lt_new_inb_headers MAPPING FROM ENTITY ).
+    lt_inb_delivery_item_ctx = CORRESPONDING #( lt_new_inb_items MAPPING FROM ENTITY ).
+
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_key_value>).
+    <ls_key_value>-name  = zpru_if_computer_vision=>cs_context_field-inbdeliveryheaders-field_name.
+    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = lt_inb_delivery_header_ctx
+                                                    compress = abap_true ).
+
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING <ls_key_value>.
+    <ls_key_value>-name  = zpru_if_computer_vision=>cs_context_field-inbdeliveryitems-field_name.
+    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = lt_inb_delivery_item_ctx
+                                                    compress = abap_true ).
+
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING <ls_key_value>.
+    <ls_key_value>-name  = zpru_if_computer_vision=>cs_context_field-inbdeliverycreationcontent-field_name.
+    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = lt_creation_content
+                                                    compress = abap_true ).
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS lcl_adf_tool_provider IMPLEMENTATION.
   METHOD provide_tool_instance.
     CASE is_tool_master_data-toolname.
@@ -1420,6 +1529,8 @@ CLASS lcl_adf_tool_provider IMPLEMENTATION.
         ro_executor = NEW lcl_adf_classify_danger_goods( ).
       WHEN `VALIDATE_CMR`.
         ro_executor = NEW lcl_adf_validate_cmr( ).
+      WHEN `CREATE_INB_DELIVERY`.
+        ro_executor = NEW lcl_adf_create_inb_delivery( ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
@@ -1451,6 +1562,9 @@ CLASS lcl_adf_schema_provider IMPLEMENTATION.
       WHEN `VALIDATE_CMR`.
         ro_structure_schema ?= cl_abap_structdescr=>describe_by_name(
                                    p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_VALIDATE_REQ` ).
+      WHEN `CREATE_INB_DELIVERY`.
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name(
+                                   p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_INB_DELIVERY_CREATE_REQUEST` ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
