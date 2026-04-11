@@ -54,4 +54,9 @@ INTERFACE zpru_if_computer_vision
 
     tt_cmr_overall_status TYPE STANDARD TABLE OF ts_cmr_overall_status WITH EMPTY KEY.
 
+TYPES: TT_cmr_alert_context TYPE STANDARD TABLE OF zpru_cmr_alert WITH EMPTY KEY.
+
+
+
+
 ENDINTERFACE.

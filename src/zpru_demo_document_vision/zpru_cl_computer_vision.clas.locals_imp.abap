@@ -567,33 +567,22 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
     DATA lt_cmr_create_item    TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader\_cmritems.
     DATA lt_cmr_header_context TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
     DATA lt_cmr_item_context   TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_creation_content TYPE zpru_if_computer_vision=>tt_cmr_create_content.
 
-    FIELD-SYMBOLS <ls_cmr_create> TYPE zpru_s_cmr_create_request.
+    FIELD-SYMBOLS <ls_cmr_create> TYPE zpru_if_computer_vision=>ts_cmr_create_request.
 
     ASSIGN is_input->* TO <ls_cmr_create>.
     IF sy-subrc <> 0.
       RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDIF.
+    /ui2/cl_json=>deserialize( EXPORTING json = <ls_cmr_create>-cmrcreationcontent
+                               CHANGING  data = lt_creation_content ).
 
-    LOOP AT <ls_cmr_create>-cmrcreationrequest ASSIGNING FIELD-SYMBOL(<ls_cmrcreationrequest>).
-
-      CLEAR: lt_headers,
-             lt_items.
-
-      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmrcreationrequest>-cmrheaders
-                                           hex_as_base64 = abap_false
-                                 CHANGING  data          = lt_headers ).
-
-      lt_headers_all = CORRESPONDING #( BASE ( lt_headers_all ) lt_headers ).
-
-      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_cmrcreationrequest>-cmritems
-                                           hex_as_base64 = abap_false
-                                 CHANGING  data          = lt_items ).
-
-      lt_items_all = CORRESPONDING #( BASE ( lt_items_all ) lt_items ).
+    LOOP AT lt_creation_content ASSIGNING FIELD-SYMBOL(<ls_cmrcreationcontent>).
+      lt_headers_all = CORRESPONDING #( BASE ( lt_headers_all ) <ls_cmrcreationcontent>-cmrheaders ).
+      lt_items_all = CORRESPONDING #( BASE ( lt_items_all ) <ls_cmrcreationcontent>-cmritems ).
     ENDLOOP.
 
-    " Determine next CMRID: select max from DB via CDS, increment by 1
     SELECT MAX( cmrid )
       FROM zr_pru_cmr_header
       INTO @DATA(lv_max_cmrid).
@@ -674,8 +663,8 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
                                                     compress = abap_true ).
 
     APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING <ls_key_value>.
-    <ls_key_value>-name  = 'CMRCREATIONREQUEST'.
-    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = <ls_cmr_create>-cmrcreationrequest
+    <ls_key_value>-name  = 'CMRCREATIONCONTENT'.
+    <ls_key_value>-value = /ui2/cl_json=>serialize( data     = lt_creation_content
                                                     compress = abap_true ).
   ENDMETHOD.
 ENDCLASS.
