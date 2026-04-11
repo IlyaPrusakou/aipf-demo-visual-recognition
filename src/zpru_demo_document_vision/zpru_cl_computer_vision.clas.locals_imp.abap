@@ -61,9 +61,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
            tt_response_root TYPE STANDARD TABLE OF ts_response WITH EMPTY KEY.
 
     DATA lt_raw_response       TYPE tt_response_root.
-    DATA ls_cmr_create_request TYPE zpru_s_cmr_create_request.
+    DATA ls_cmr_create_request TYPE zpru_if_computer_vision=>ts_cmr_create_request.
     DATA lt_header             TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
     DATA lt_items              TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_creation_content TYPE zpru_if_computer_vision=>tt_cmr_create_content.
 
     /ui2/cl_json=>deserialize( EXPORTING json = iv_thinking_output
                                CHANGING  data = lt_raw_response ).
@@ -77,7 +78,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 
         LOOP AT lt_raw_response ASSIGNING FIELD-SYMBOL(<ls_message>).
 
-          APPEND INITIAL LINE TO ls_cmr_create_request-cmrcreationrequest ASSIGNING FIELD-SYMBOL(<ls_cmrcreationrequest>).
+          APPEND INITIAL LINE TO lt_creation_content ASSIGNING FIELD-SYMBOL(<ls_cmrcreationrequest>).
           <ls_cmrcreationrequest>-message = <ls_message>-messageid.
 
           LOOP AT <ls_message>-attachments ASSIGNING FIELD-SYMBOL(<ls_attachment>).
@@ -92,12 +93,14 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
               ENDLOOP.
             ENDLOOP.
           ENDLOOP.
-          <ls_cmrcreationrequest>-cmrheaders = /ui2/cl_json=>serialize( data = lt_header ).
-          <ls_cmrcreationrequest>-cmritems   = /ui2/cl_json=>serialize( data = lt_items ).
+          <ls_cmrcreationrequest>-cmrheaders = lt_header .
+          <ls_cmrcreationrequest>-cmritems   = lt_items .
 
         ENDLOOP.
 
-        er_first_tool_input = NEW zpru_s_cmr_create_request( ls_cmr_create_request ).
+        ls_cmr_create_request-cmrcreationcontent = /ui2/cl_json=>serialize( data = lt_creation_content ).
+
+        er_first_tool_input = NEW zpru_if_computer_vision=>ts_cmr_create_request( ls_cmr_create_request ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
@@ -949,20 +952,20 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
              findingtype   TYPE zpru_cmr_valid-findingtype,
              fieldname     TYPE zpru_cmr_valid-fieldname,
              findingmsg    TYPE zpru_cmr_valid-findingmsg,
-            END OF ts_finding_out,
-            tt_findings_out TYPE STANDARD TABLE OF ts_finding_out WITH EMPTY KEY.
+           END OF ts_finding_out,
+           tt_findings_out TYPE STANDARD TABLE OF ts_finding_out WITH EMPTY KEY.
 
     TYPES: BEGIN OF ts_cmr_status,
              cmruuid       TYPE zpru_cmr_header-cmruuid,
              cmrid         TYPE zpru_cmr_header-cmrid,
              overallstatus TYPE char10,
-            END OF ts_cmr_status,
-            tt_cmr_status TYPE STANDARD TABLE OF ts_cmr_status WITH EMPTY KEY.
+           END OF ts_cmr_status,
+           tt_cmr_status TYPE STANDARD TABLE OF ts_cmr_status WITH EMPTY KEY.
 
     TYPES: BEGIN OF ts_validation_output,
-              cmrstatus TYPE tt_cmr_status,
-              findings  TYPE tt_findings_out,
-            END OF ts_validation_output.
+             cmrstatus TYPE tt_cmr_status,
+             findings  TYPE tt_findings_out,
+           END OF ts_validation_output.
 
     DATA lt_headers      TYPE tt_headers.
     DATA lt_items        TYPE tt_items.
@@ -977,44 +980,19 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
     DATA ls_finding_out  TYPE ts_finding_out.
     DATA lv_cid_counter  TYPE i VALUE 1.
 
-    " --- Read from controller data board ---
-    SORT io_controller->mt_input_output BY number ASCENDING.
-    LOOP AT io_controller->mt_input_output ASSIGNING FIELD-SYMBOL(<ls_io>).
-      READ TABLE <ls_io>-key_value_pairs WITH KEY name = 'CMRHEADERS'
-           ASSIGNING FIELD-SYMBOL(<ls_kvp>).
-      IF sy-subrc = 0.
-        lv_headers_json = <ls_kvp>-value.
-      ENDIF.
+    FIELD-SYMBOLS: <ls_input> TYPE zpru_s_cmr_validate_req.
 
-      READ TABLE <ls_io>-key_value_pairs WITH KEY name = 'CMRITEMS'
-           ASSIGNING <ls_kvp>.
-      IF sy-subrc = 0.
-        lv_items_json = <ls_kvp>-value.
-      ENDIF.
-
-      READ TABLE <ls_io>-key_value_pairs WITH KEY name = 'CMRALERTS'
-           ASSIGNING <ls_kvp>.
-      IF sy-subrc = 0.
-        lv_alerts_json = <ls_kvp>-value.
-      ENDIF.
-    ENDLOOP.
-
-    IF lv_headers_json IS INITIAL OR lv_items_json IS INITIAL.
-      ev_error_flag = abap_true.
-      RETURN.
+    ASSIGN is_input->* TO <ls_input>.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDIF.
 
-    /ui2/cl_json=>deserialize( EXPORTING json          = lv_headers_json
+    /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-cmrheaders
                                           hex_as_base64 = abap_false
                                CHANGING  data          = lt_headers ).
-    /ui2/cl_json=>deserialize( EXPORTING json          = lv_items_json
+    /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-cmritems
                                           hex_as_base64 = abap_false
                                CHANGING  data          = lt_items ).
-    IF lv_alerts_json IS NOT INITIAL.
-      /ui2/cl_json=>deserialize( EXPORTING json          = lv_alerts_json
-                                            hex_as_base64 = abap_false
-                                 CHANGING  data          = lt_alerts ).
-    ENDIF.
 
     " --- Validate each CMR header ---
     LOOP AT lt_headers ASSIGNING FIELD-SYMBOL(<ls_hdr>).
@@ -1022,7 +1000,12 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
       IF <ls_hdr>-senderinfo IS INITIAL.
         CLEAR ls_finding_out.
         APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
+
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INCOMPLETE'.
@@ -1048,8 +1031,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
       IF <ls_hdr>-consigneeinfo IS INITIAL.
         CLEAR ls_finding_out.
-        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INCOMPLETE'.
@@ -1075,8 +1061,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
       IF <ls_hdr>-carrierinfo IS INITIAL.
         CLEAR ls_finding_out.
-        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INCOMPLETE'.
@@ -1102,8 +1091,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
       IF <ls_hdr>-takingoverplace IS INITIAL.
         CLEAR ls_finding_out.
-        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INCOMPLETE'.
@@ -1129,8 +1121,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
       IF <ls_hdr>-deliveryplace IS INITIAL.
         CLEAR ls_finding_out.
-        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INCOMPLETE'.
@@ -1156,8 +1151,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
       IF <ls_hdr>-takingoverdate IS INITIAL OR <ls_hdr>-takingoverdate = '00000000'.
         CLEAR ls_finding_out.
-        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INCOMPLETE'.
@@ -1183,8 +1181,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
       IF <ls_hdr>-cashondelivery > 0 AND <ls_hdr>-currency IS INITIAL.
         CLEAR ls_finding_out.
-        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INCOMPLETE'.
@@ -1215,8 +1216,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                       NEXT n = n + 1 ).
       IF lv_item_count = 0.
         CLEAR ls_finding_out.
-        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-        <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+        APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+        TRY.
+            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          CATCH   cx_uuid_error.
+        ENDTRY.
         <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
         <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
         <ls_finding_rap>-findingstatus = 'INVALID'.
@@ -1246,8 +1250,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
         IF <ls_item>-natureofgoods IS INITIAL.
           CLEAR ls_finding_out.
-          APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-          <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+          TRY.
+              <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+            CATCH   cx_uuid_error.
+          ENDTRY.
           <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
           <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
           <ls_finding_rap>-cmritemuuid   = <ls_item>-cmritemuuid.
@@ -1277,8 +1284,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
         IF <ls_item>-grossweight <= 0.
           CLEAR ls_finding_out.
-          APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-          <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+          TRY.
+              <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+            CATCH   cx_uuid_error.
+          ENDTRY.
           <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
           <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
           <ls_finding_rap>-cmritemuuid   = <ls_item>-cmritemuuid.
@@ -1308,8 +1318,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
         IF <ls_item>-weightunitfield IS INITIAL.
           CLEAR ls_finding_out.
-          APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-          <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+          APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+          TRY.
+              <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+            CATCH   cx_uuid_error.
+          ENDTRY.
           <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
           <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
           <ls_finding_rap>-cmritemuuid   = <ls_item>-cmritemuuid.
@@ -1343,8 +1356,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
         IF sy-subrc = 0.
           IF <ls_item>-unitednationnumber IS INITIAL.
             CLEAR ls_finding_out.
-            APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+            APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+            TRY.
+                <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+              CATCH   cx_uuid_error.
+            ENDTRY.
             <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
             <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
             <ls_finding_rap>-cmritemuuid   = <ls_item>-cmritemuuid.
@@ -1374,8 +1390,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
           IF <ls_item>-hazardclass IS INITIAL.
             CLEAR ls_finding_out.
-            APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+            APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+            TRY.
+                <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+              CATCH   cx_uuid_error.
+            ENDTRY.
             <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
             <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
             <ls_finding_rap>-cmritemuuid   = <ls_item>-cmritemuuid.
@@ -1405,8 +1424,11 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
           IF <ls_item>-packinggroup IS INITIAL.
             CLEAR ls_finding_out.
-            APPEND INITIAL LINE TO lt_findings_rap ASSIGNING FIELD-SYMBOL(<ls_finding_rap>).
-            <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+            APPEND INITIAL LINE TO lt_findings_rap ASSIGNING <ls_finding_rap>.
+            TRY.
+                <ls_finding_rap>-findinguuid   = cl_system_uuid=>create_uuid_x16_static( ).
+              CATCH   cx_uuid_error.
+            ENDTRY.
             <ls_finding_rap>-cmruuid       = <ls_hdr>-cmruuid.
             <ls_finding_rap>-cmrid         = <ls_hdr>-cmrid.
             <ls_finding_rap>-cmritemuuid   = <ls_item>-cmritemuuid.
@@ -1516,11 +1538,11 @@ CLASS lcl_adf_schema_provider IMPLEMENTATION.
   METHOD get_input_abap_type.
     CASE is_tool_master_data-toolname.
       WHEN `CREATE_CMR`.
-        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `ZPRU_S_CMR_CREATE_REQUEST` ).
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_CREATE_REQUEST` ).
       WHEN `CLASSIFY_DANGER_GOODS`.
-        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `ZPRU_S_CMR_CLASSIFY_REQ` ).
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_CLASSIFY_REQ` ).
       WHEN `VALIDATE_CMR`.
-        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `ZPRU_S_CMR_VALIDATE_REQ` ).
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name( p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_CMR_VALIDATE_REQ` ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
