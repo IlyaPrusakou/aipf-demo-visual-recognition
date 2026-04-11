@@ -559,14 +559,14 @@ ENDCLASS.
 
 CLASS lcl_adf_create_cmr IMPLEMENTATION.
   METHOD execute_code_int.
-    DATA lt_headers            TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
-    DATA lt_items              TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
-    DATA lt_headers_all        TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
-    DATA lt_items_all          TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_headers            TYPE zpru_if_computer_vision=>tt_cmr_header_context.
+    DATA lt_items              TYPE zpru_if_computer_vision=>tt_cmr_item_context.
+    DATA lt_headers_all        TYPE zpru_if_computer_vision=>tt_cmr_header_context.
+    DATA lt_items_all          TYPE zpru_if_computer_vision=>tt_cmr_item_context.
     DATA lt_cmr_create_head    TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader.
     DATA lt_cmr_create_item    TYPE TABLE FOR CREATE zr_pru_cmr_header\\zrprucmrheader\_cmritems.
-    DATA lt_cmr_header_context TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
-    DATA lt_cmr_item_context   TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_cmr_header_context TYPE zpru_if_computer_vision=>tt_cmr_header_context.
+    DATA lt_cmr_item_context   TYPE zpru_if_computer_vision=>tt_cmr_item_context.
     DATA lt_creation_content TYPE zpru_if_computer_vision=>tt_cmr_create_content.
 
     FIELD-SYMBOLS <ls_cmr_create> TYPE zpru_if_computer_vision=>ts_cmr_create_request.
@@ -677,10 +677,10 @@ CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
     DATA lv_is_danger         TYPE abap_bool.
     DATA lv_reason            TYPE string.
     DATA lt_alert_rap         TYPE TABLE FOR CREATE zr_pru_cmr_alert\\zrprucmralert.
-    DATA lt_cmr_item_context  TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_cmr_item_context  TYPE zpru_if_computer_vision=>tt_cmr_item_context.
     DATA lt_cmr_alert_context TYPE STANDARD TABLE OF zpru_cmr_alert WITH EMPTY KEY.
 
-    FIELD-SYMBOLS <ls_input> TYPE zpru_s_cmr_classify_req.
+    FIELD-SYMBOLS <ls_input> TYPE  zpru_if_computer_vision=>ts_cmr_classify_req.
 
     ASSIGN is_input->* TO <ls_input>.
     IF sy-subrc <> 0.
@@ -698,7 +698,6 @@ CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    " --- Classify each item ---
     DATA(lv_count) = 0.
     LOOP AT lt_cmr_item_context ASSIGNING FIELD-SYMBOL(<ls_item>).
       CLEAR: lv_is_danger,
@@ -706,7 +705,6 @@ CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
 
       lv_count += 1.
 
-      " Trigger A: structured hazard fields already populated
       IF <ls_item>-hazardclass IS NOT INITIAL.
         lv_is_danger = abap_true.
         lv_reason = |Hazard class { <ls_item>-hazardclass } detected|.
@@ -716,7 +714,6 @@ CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
         lv_reason = |UN number { <ls_item>-unitednationnumber } present|.
       ENDIF.
 
-      " Trigger B: keyword match on NatureOfGoods
       IF lv_is_danger = abap_false.
         lv_nature_up = to_upper( <ls_item>-natureofgoods ).
 
