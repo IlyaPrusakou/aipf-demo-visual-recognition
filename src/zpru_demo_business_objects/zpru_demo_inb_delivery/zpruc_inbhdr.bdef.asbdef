@@ -1,0 +1,33 @@
+projection implementation in class ZPRUBP_C_INBHDR unique;
+strict ( 2 );
+extensible;
+use draft;
+use side effects;
+define behavior for ZPRUC_INBHDR alias INBHDR
+extensible
+use etag
+{
+  use create;
+  use update;
+  use delete;
+
+  use action Edit;
+  use action Activate;
+  use action Discard;
+  use action Resume;
+  use action Prepare;
+
+  use association _INBITM { create; with draft; }
+
+}
+
+define behavior for ZPRUC_INBITM alias INBITM
+extensible
+use etag
+{
+  use update;
+  use delete;
+
+  use association _INBHDR { with draft; }
+
+}

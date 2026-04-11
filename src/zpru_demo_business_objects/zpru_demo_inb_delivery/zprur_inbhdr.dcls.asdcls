@@ -1,0 +1,6 @@
+@EndUserText.label: 'ZPRUR_INBHDR'
+@MappingRole: true
+define role ZPRUR_INBHDR {
+  grant select on ZPRUR_INBHDR
+  where TRUE;
+}

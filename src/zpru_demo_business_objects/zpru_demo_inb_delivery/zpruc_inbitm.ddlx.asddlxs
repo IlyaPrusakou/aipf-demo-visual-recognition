@@ -1,0 +1,140 @@
+@Metadata.layer: #CORE
+@UI.headerInfo.title.type: #STANDARD
+@UI.headerInfo.title.value: 'Deliveryid'
+@UI.headerInfo.description.type: #STANDARD
+@UI.headerInfo.description.value: 'Deliveryid'
+annotate view ZPRUC_INBITM with
+{
+  @EndUserText.label: 'UUID'
+  @UI.identification: [ {
+    position: 10 , 
+    label: 'UUID'
+  } ]
+  @UI.lineItem: [ {
+    position: 10 , 
+    label: 'UUID'
+  } ]
+  @UI.selectionField: [ {
+    position: 10 
+  } ]
+  UUID;
+  
+  @EndUserText.label: 'ParentUUID'
+  @UI.facet: [ {
+    label: 'General Information', 
+    id: 'GeneralInfo', 
+    purpose: #STANDARD, 
+    position: 20 , 
+    type: #IDENTIFICATION_REFERENCE
+  } ]
+  @UI.identification: [ {
+    position: 20 , 
+    label: 'ParentUUID'
+  } ]
+  @UI.lineItem: [ {
+    position: 20 , 
+    label: 'ParentUUID'
+  } ]
+  @UI.selectionField: [ {
+    position: 20 
+  } ]
+  ParentUUID;
+  
+  @EndUserText.label: 'Deliveryid'
+  @UI.identification: [ {
+    position: 30 , 
+    label: 'Deliveryid'
+  } ]
+  @UI.lineItem: [ {
+    position: 30 , 
+    label: 'Deliveryid'
+  } ]
+  @UI.selectionField: [ {
+    position: 30 
+  } ]
+  Deliveryid;
+  
+  @EndUserText.label: 'Itempos'
+  @UI.identification: [ {
+    position: 40 , 
+    label: 'Itempos'
+  } ]
+  @UI.lineItem: [ {
+    position: 40 , 
+    label: 'Itempos'
+  } ]
+  @UI.selectionField: [ {
+    position: 40 
+  } ]
+  Itempos;
+  
+  @EndUserText.label: 'Materialdesc'
+  @UI.identification: [ {
+    position: 50 , 
+    label: 'Materialdesc'
+  } ]
+  @UI.lineItem: [ {
+    position: 50 , 
+    label: 'Materialdesc'
+  } ]
+  @UI.selectionField: [ {
+    position: 50 
+  } ]
+  Materialdesc;
+  
+  @EndUserText.label: 'Quantity'
+  @UI.identification: [ {
+    position: 60 , 
+    label: 'Quantity'
+  } ]
+  @UI.lineItem: [ {
+    position: 60 , 
+    label: 'Quantity'
+  } ]
+  @UI.selectionField: [ {
+    position: 60 
+  } ]
+  Quantity;
+  
+  @EndUserText.label: 'Grossweight'
+  @UI.identification: [ {
+    position: 70 , 
+    label: 'Grossweight'
+  } ]
+  @UI.lineItem: [ {
+    position: 70 , 
+    label: 'Grossweight'
+  } ]
+  @UI.selectionField: [ {
+    position: 70 
+  } ]
+  Grossweight;
+  
+  @EndUserText.label: 'Hazardclass'
+  @UI.identification: [ {
+    position: 80 , 
+    label: 'Hazardclass'
+  } ]
+  @UI.lineItem: [ {
+    position: 80 , 
+    label: 'Hazardclass'
+  } ]
+  @UI.selectionField: [ {
+    position: 80 
+  } ]
+  Hazardclass;
+  
+  @EndUserText.label: '_BaseEntity'
+  @UI.identification: [ {
+    position: 100 , 
+    label: '_BaseEntity'
+  } ]
+  @UI.lineItem: [ {
+    position: 100 , 
+    label: '_BaseEntity'
+  } ]
+  @UI.selectionField: [ {
+    position: 100 
+  } ]
+  _BaseEntity;
+}

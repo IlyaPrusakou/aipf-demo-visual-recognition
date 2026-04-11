@@ -1,0 +1,90 @@
+managed implementation in class ZPRUBP_R_INBHDR unique;
+strict ( 2 );
+with draft;
+extensible;
+define behavior for ZPRUR_INBHDR alias INBHDR
+persistent table ZPRUINBHDR
+extensible
+draft table ZPRUINBHDR_D
+etag master LocalLastChangedAt
+lock master total etag LastChangedAt
+authorization master( global )
+{
+  field ( readonly )
+   UUID,
+   LocalCreatedBy,
+   LocalCreatedAt,
+   LocalLastChangedBy,
+   LocalLastChangedAt,
+   LastChangedAt;
+
+  field ( numbering : managed )
+   UUID;
+
+
+  create;
+  update;
+  delete;
+
+  draft action Activate optimized;
+  draft action Discard;
+  draft action Edit;
+  draft action Resume;
+  draft determine action Prepare;
+
+  mapping for ZPRUINBHDR corresponding extensible
+  {
+    UUID = UUID;
+    Deliveryid = DELIVERYID;
+    Vendor = VENDOR;
+    Consignee = CONSIGNEE;
+    Deliverydate = Deliverydate;
+    Cmrreference = CMRREFERENCE;
+    Arrivalplace = ARRIVALPLACE;
+    LocalCreatedBy = LOCAL_CREATED_BY;
+    LocalCreatedAt = LOCAL_CREATED_AT;
+    LocalLastChangedBy = LOCAL_LAST_CHANGED_BY;
+    LocalLastChangedAt = LOCAL_LAST_CHANGED_AT;
+    LastChangedAt = LAST_CHANGED_AT;
+  }
+
+  association _INBITM { create; with draft; }
+
+}
+
+define behavior for ZPRUR_INBITM alias INBITM
+persistent table ZPRUINBITM
+extensible
+draft table ZPRUINBITM_D
+etag dependent by _INBHDR
+lock dependent by _INBHDR
+authorization dependent by _INBHDR
+{
+  field ( readonly )
+   UUID,
+   ParentUUID;
+
+  field ( numbering : managed )
+   UUID;
+
+
+  update;
+  delete;
+
+  mapping for ZPRUINBITM corresponding extensible
+  {
+    UUID = UUID;
+    ParentUUID = PARENT_UUID;
+    Deliveryid = DELIVERYID;
+    Itempos = ITEMPOS;
+    Materialdesc = MATERIALDESC;
+    Quantity = QUANTITY;
+    Unit = UNIT;
+    Grossweight = GROSSWEIGHT;
+    Weightunit = WEIGHTUNIT;
+    Hazardclass = HAZARDCLASS;
+  }
+
+  association _INBHDR { with draft; }
+
+}

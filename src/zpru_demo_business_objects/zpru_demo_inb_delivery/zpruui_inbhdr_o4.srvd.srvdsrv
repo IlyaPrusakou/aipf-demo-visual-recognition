@@ -1,0 +1,12 @@
+@EndUserText: {
+  label: 'Service Definition for ZPRUC_INBHDR'
+}
+@ObjectModel: {
+  leadingEntity: {
+    name: 'ZPRUC_INBHDR'
+  }
+}
+define service ZPRUUI_INBHDR_O4 provider contracts odata_v4_ui {
+  expose ZPRUC_INBHDR as INBHDR;
+  expose ZPRUC_INBITM as INBITM;
+}

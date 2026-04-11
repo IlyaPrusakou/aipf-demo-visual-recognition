@@ -1,0 +1,189 @@
+@Metadata.layer: #CORE
+@UI.headerInfo.title.type: #STANDARD
+@UI.headerInfo.title.value: 'Deliveryid'
+@UI.headerInfo.description.type: #STANDARD
+@UI.headerInfo.description.value: 'Deliveryid'
+annotate view ZPRUC_INBHDR with
+{
+  @EndUserText.label: 'UUID'
+  @UI.identification: [ {
+    position: 10 , 
+    label: 'UUID'
+  } ]
+  @UI.lineItem: [ {
+    position: 10 , 
+    label: 'UUID'
+  } ]
+  @UI.selectionField: [ {
+    position: 10 
+  } ]
+  UUID;
+  
+  @EndUserText.label: 'Deliveryid'
+  @UI.facet: [ {
+    label: 'General Information', 
+    id: 'GeneralInfo', 
+    purpose: #STANDARD, 
+    position: 20 , 
+    type: #IDENTIFICATION_REFERENCE
+  }, 
+  {
+    label: 'INBITM Items', 
+    id: 'INBITMItems', 
+    purpose: #STANDARD, 
+    position: 21 , 
+    type: #LINEITEM_REFERENCE, 
+    targetElement: '_INBITM'
+  } ]
+  @UI.identification: [ {
+    position: 20 , 
+    label: 'Deliveryid'
+  } ]
+  @UI.lineItem: [ {
+    position: 20 , 
+    label: 'Deliveryid'
+  } ]
+  @UI.selectionField: [ {
+    position: 20 
+  } ]
+  Deliveryid;
+  
+  @EndUserText.label: 'Vendor'
+  @UI.identification: [ {
+    position: 30 , 
+    label: 'Vendor'
+  } ]
+  @UI.lineItem: [ {
+    position: 30 , 
+    label: 'Vendor'
+  } ]
+  @UI.selectionField: [ {
+    position: 30 
+  } ]
+  Vendor;
+  
+  @EndUserText.label: 'Consignee'
+  @UI.identification: [ {
+    position: 40 , 
+    label: 'Consignee'
+  } ]
+  @UI.lineItem: [ {
+    position: 40 , 
+    label: 'Consignee'
+  } ]
+  @UI.selectionField: [ {
+    position: 40 
+  } ]
+  Consignee;
+  
+  @EndUserText.label: 'Deliverydate'
+  @UI.identification: [ {
+    position: 41 , 
+    label: 'Deliverydate'
+  } ]
+  @UI.lineItem: [ {
+    position: 41 , 
+    label: 'Deliverydate'
+  } ]
+  @UI.selectionField: [ {
+    position: 41 
+  } ]  
+ Deliverydate;
+  
+  @EndUserText.label: 'Cmrreference'
+  @UI.identification: [ {
+    position: 50 , 
+    label: 'Cmrreference'
+  } ]
+  @UI.lineItem: [ {
+    position: 50 , 
+    label: 'Cmrreference'
+  } ]
+  @UI.selectionField: [ {
+    position: 50 
+  } ]
+  Cmrreference;
+  
+  @EndUserText.label: 'Arrivalplace'
+  @UI.identification: [ {
+    position: 60 , 
+    label: 'Arrivalplace'
+  } ]
+  @UI.lineItem: [ {
+    position: 60 , 
+    label: 'Arrivalplace'
+  } ]
+  @UI.selectionField: [ {
+    position: 60 
+  } ]
+  Arrivalplace;
+  
+  @UI.identification: [ {
+    position: 70 
+  } ]
+  @UI.lineItem: [ {
+    position: 70 
+  } ]
+  @UI.selectionField: [ {
+    position: 70 
+  } ]
+  LocalCreatedBy;
+  
+  @UI.identification: [ {
+    position: 80 
+  } ]
+  @UI.lineItem: [ {
+    position: 80 
+  } ]
+  @UI.selectionField: [ {
+    position: 80 
+  } ]
+  LocalCreatedAt;
+  
+  @UI.identification: [ {
+    position: 90 
+  } ]
+  @UI.lineItem: [ {
+    position: 90 
+  } ]
+  @UI.selectionField: [ {
+    position: 90 
+  } ]
+  LocalLastChangedBy;
+  
+  @UI.identification: [ {
+    position: 100 
+  } ]
+  @UI.lineItem: [ {
+    position: 100 
+  } ]
+  @UI.selectionField: [ {
+    position: 100 
+  } ]
+  LocalLastChangedAt;
+  
+  @UI.identification: [ {
+    position: 110 
+  } ]
+  @UI.lineItem: [ {
+    position: 110 
+  } ]
+  @UI.selectionField: [ {
+    position: 110 
+  } ]
+  LastChangedAt;
+  
+  @EndUserText.label: '_BaseEntity'
+  @UI.identification: [ {
+    position: 130 , 
+    label: '_BaseEntity'
+  } ]
+  @UI.lineItem: [ {
+    position: 130 , 
+    label: '_BaseEntity'
+  } ]
+  @UI.selectionField: [ {
+    position: 130 
+  } ]
+  _BaseEntity;
+}
