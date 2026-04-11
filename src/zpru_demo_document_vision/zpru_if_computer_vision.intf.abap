@@ -48,14 +48,19 @@ INTERFACE zpru_if_computer_vision
                  field_name    TYPE string VALUE `INBDELIVERYCREATIONCONTENT`,
                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_INB_DELIVERY_CREATE_CONTENT`,
                END OF inbdeliverycreationcontent,
+               BEGIN OF storagebins,
+                 field_name    TYPE string VALUE `STORAGEBINS`,
+                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TT_STORAGE_BIN_CONTEXT`,
+               END OF storagebins,
              END OF cs_context_field.
 
   CONSTANTS: BEGIN OF cs_tools,
-                create_cmr            TYPE string VALUE `CREATE_CMR`,
-                classify_danger_goods TYPE string VALUE `CLASSIFY_DANGER_GOODS`,
-                validate_cmr          TYPE string VALUE `VALIDATE_CMR`,
-                create_inb_delivery   TYPE string VALUE `CREATE_INB_DELIVERY`,
-              END OF cs_tools.
+                 create_cmr            TYPE string VALUE `CREATE_CMR`,
+                 classify_danger_goods TYPE string VALUE `CLASSIFY_DANGER_GOODS`,
+                 validate_cmr          TYPE string VALUE `VALIDATE_CMR`,
+                 create_inb_delivery   TYPE string VALUE `CREATE_INB_DELIVERY`,
+                 find_storage_bin      TYPE string VALUE `FIND_STORAGE_BIN`,
+               END OF cs_tools.
 
   CONSTANTS: BEGIN OF cs_input_tool_structure,
                BEGIN OF create_cmr,
@@ -70,6 +75,9 @@ INTERFACE zpru_if_computer_vision
                BEGIN OF create_inb_delivery,
                  absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_INB_DELIVERY_CREATE_REQUEST`,
                END OF create_inb_delivery,
+               BEGIN OF find_storage_bin,
+                 absolute_name TYPE string VALUE `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_FIND_STORAGE_BIN_REQUEST`,
+               END OF find_storage_bin,
              END OF cs_input_tool_structure.
 
   CONSTANTS: BEGIN OF cs_input_context_fields,
@@ -86,10 +94,16 @@ INTERFACE zpru_if_computer_vision
                  cmritems           TYPE string VALUE `CMRITEMS`,
                  cmrcreationcontent TYPE string VALUE `CMRCREATIONCONTENT`,
                END OF validate_cmr,
-               BEGIN OF create_inb_delivery,
-                 inbdeliverycreationcontent TYPE string VALUE `INBDELIVERYCREATIONCONTENT`,
-               END OF create_inb_delivery,
-             END OF cs_input_context_fields.
+                BEGIN OF create_inb_delivery,
+                  inbdeliverycreationcontent TYPE string VALUE `INBDELIVERYCREATIONCONTENT`,
+                END OF create_inb_delivery,
+                BEGIN OF find_storage_bin,
+                  cmrheaders          TYPE string VALUE `CMRHEADERS`,
+                  cmritems            TYPE string VALUE `CMRITEMS`,
+                  inbdeliveryheaders  TYPE string VALUE `INBDELIVERYHEADERS`,
+                  inbdeliveryitems    TYPE string VALUE `INBDELIVERYITEMS`,
+                END OF find_storage_bin,
+              END OF cs_input_context_fields.
 
   CONSTANTS: BEGIN OF cs_output_context_fields,
                BEGIN OF create_cmr,
@@ -109,6 +123,9 @@ INTERFACE zpru_if_computer_vision
                  inbdeliveryitems           TYPE string VALUE `INBDELIVERYITEMS`,
                  inbdeliverycreationcontent TYPE string VALUE `INBDELIVERYCREATIONCONTENT`,
                END OF create_inb_delivery,
+               BEGIN OF find_storage_bin,
+                 storagebins TYPE string VALUE `STORAGEBINS`,
+               END OF find_storage_bin,
              END OF cs_output_context_fields.
 
   " CONTEXT
@@ -196,5 +213,19 @@ INTERFACE zpru_if_computer_vision
       inbdeliverycreationcontent TYPE string,
     END OF ts_inb_delivery_create_request,
     tt_inb_delivery_create_request TYPE STANDARD TABLE OF ts_inb_delivery_create_request WITH EMPTY KEY.
+
+  " CONTEXT FIELD 'STORAGEBINS'
+  TYPES ts_storage_bin_context TYPE zpru_storbin.
+  TYPES tt_storage_bin_context TYPE STANDARD TABLE OF ts_storage_bin_context WITH EMPTY KEY.
+
+  " 5 INPUT FOR TOOL 'FIND_STORAGE_BIN'
+  TYPES:
+    BEGIN OF ts_find_storage_bin_request,
+      cmrheaders          TYPE string,
+      cmritems            TYPE string,
+      inbdeliveryheaders  TYPE string,
+      inbdeliveryitems    TYPE string,
+    END OF ts_find_storage_bin_request,
+    tt_find_storage_bin_request TYPE STANDARD TABLE OF ts_find_storage_bin_request WITH EMPTY KEY.
 
 ENDINTERFACE.

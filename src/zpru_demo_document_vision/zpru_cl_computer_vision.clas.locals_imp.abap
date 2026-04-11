@@ -1520,6 +1520,72 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
 ENDCLASS.
 
 
+CLASS lcl_adf_find_storage_bin IMPLEMENTATION.
+  METHOD execute_code_int.
+    DATA lt_cmr_headers      TYPE zpru_if_computer_vision=>tt_cmr_header_context.
+    DATA lt_cmr_items        TYPE zpru_if_computer_vision=>tt_cmr_item_context.
+    DATA lt_inb_headers      TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
+    DATA lt_inb_items        TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
+    DATA lt_storage_bins     TYPE zpru_if_computer_vision=>tt_storage_bin_context.
+    DATA lt_storage_bins_out TYPE zpru_if_computer_vision=>tt_storage_bin_context.
+
+    FIELD-SYMBOLS <ls_input> TYPE zpru_if_computer_vision=>ts_find_storage_bin_request.
+
+    ASSIGN is_input->* TO <ls_input>.
+    IF sy-subrc <> 0.
+      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDIF.
+
+    " Deserialize input context data
+    IF <ls_input>-cmrheaders IS NOT INITIAL.
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-cmrheaders
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_cmr_headers ).
+    ENDIF.
+
+    IF <ls_input>-cmritems IS NOT INITIAL.
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-cmritems
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_cmr_items ).
+    ENDIF.
+
+    IF <ls_input>-inbdeliveryheaders IS NOT INITIAL.
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-inbdeliveryheaders
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_inb_headers ).
+    ENDIF.
+
+    IF <ls_input>-inbdeliveryitems IS NOT INITIAL.
+      /ui2/cl_json=>deserialize( EXPORTING json          = <ls_input>-inbdeliveryitems
+                                           hex_as_base64 = abap_false
+                                 CHANGING  data          = lt_inb_items ).
+    ENDIF.
+
+    " Read storage bins from ZPRU_DEMO_STOR_BIN folder (ZPRUSTORBIN table)
+    SELECT * FROM zprustorbin
+      INTO CORRESPONDING FIELDS OF TABLE @lt_storage_bins
+      WHERE is_blocked = @abap_false
+      ORDER BY bin_id.
+
+    IF sy-subrc = 0.
+      " Simple logic: for demonstration, return all unblocked storage bins
+      " In a real scenario, you would match based on CMR/inbound delivery data
+      " For example: match weight requirements, dimensions, etc.
+      lt_storage_bins_out = lt_storage_bins.
+    ELSE.
+      " No storage bins found - return empty table
+      CLEAR lt_storage_bins_out.
+    ENDIF.
+
+    " Output the storage bins to context
+    APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_kv>).
+    <ls_kv>-name  = zpru_if_computer_vision=>cs_context_field-storagebins-field_name.
+    <ls_kv>-value = /ui2/cl_json=>serialize( data     = lt_storage_bins_out
+                                             compress = abap_true ).
+  ENDMETHOD.
+ENDCLASS.
+
+
 CLASS lcl_adf_tool_provider IMPLEMENTATION.
   METHOD provide_tool_instance.
     CASE is_tool_master_data-toolname.
@@ -1531,6 +1597,8 @@ CLASS lcl_adf_tool_provider IMPLEMENTATION.
         ro_executor = NEW lcl_adf_validate_cmr( ).
       WHEN `CREATE_INB_DELIVERY`.
         ro_executor = NEW lcl_adf_create_inb_delivery( ).
+      WHEN `FIND_STORAGE_BIN`.
+        ro_executor = NEW lcl_adf_find_storage_bin( ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
@@ -1565,6 +1633,9 @@ CLASS lcl_adf_schema_provider IMPLEMENTATION.
       WHEN `CREATE_INB_DELIVERY`.
         ro_structure_schema ?= cl_abap_structdescr=>describe_by_name(
                                    p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_INB_DELIVERY_CREATE_REQUEST` ).
+      WHEN `FIND_STORAGE_BIN`.
+        ro_structure_schema ?= cl_abap_structdescr=>describe_by_name(
+                                   p_name = `\INTERF=ZPRU_IF_COMPUTER_VISION\TYPE=TS_FIND_STORAGE_BIN_REQUEST` ).
       WHEN OTHERS.
         RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDCASE.
