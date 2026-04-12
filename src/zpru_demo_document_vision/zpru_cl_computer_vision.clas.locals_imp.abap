@@ -4,108 +4,6 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     RETURN.
   ENDMETHOD.
 
-  METHOD prepare_first_tool_input.
-    TYPES: BEGIN OF ts_items,
-             itemposition       TYPE n LENGTH 4,
-             marksnumbers       TYPE char100,
-             packagecount       TYPE int4,
-             packingmethod      TYPE char100,
-             natureofgoods      TYPE char100,
-             statisticalnumber  TYPE char20,
-             weightunitfield    TYPE msehi,
-             volumeunitfield    TYPE msehi,
-             grossweight        TYPE p LENGTH 7 DECIMALS 3,
-             volume             TYPE p LENGTH 7 DECIMALS 3,
-             unitednationnumber TYPE char10,
-             hazardclass        TYPE char5,
-             packinggroup       TYPE char10,
-           END OF ts_items,
-
-           tt_items TYPE STANDARD TABLE OF ts_items WITH EMPTY KEY.
-
-    TYPES: BEGIN OF ts_headers,
-             cmrid             TYPE char10,
-             senderinfo        TYPE char255,
-             consigneeinfo     TYPE char255,
-             deliveryplace     TYPE char100,
-             takingoverplace   TYPE char100,
-             takingoverdate    TYPE dats,
-             carrierinfo       TYPE char255,
-             successivecarrier TYPE char255,
-             carrierreservice  TYPE char255,
-             senderinstruction TYPE char255,
-             cashondelivery    TYPE p LENGTH 8 DECIMALS 2,
-             currency          TYPE waers_curc,
-             establishedplace  TYPE char100,
-             establisheddate   TYPE dats,
-             createdby         TYPE char12,
-             createdat         TYPE timestampl,
-             lastchangedby     TYPE char12,
-             lastchangedat     TYPE timestampl,
-             cmritems          TYPE tt_items,
-           END OF ts_headers,
-
-           tt_headers TYPE STANDARD TABLE OF ts_headers WITH EMPTY KEY.
-
-    TYPES: BEGIN OF ts_attachment,
-             cmrheaders TYPE tt_headers,
-           END OF ts_attachment,
-
-           tt_attachments TYPE STANDARD TABLE OF ts_attachment WITH EMPTY KEY.
-
-    TYPES: BEGIN OF ts_response,
-             messageid   TYPE char32,
-             attachments TYPE tt_attachments,
-           END OF ts_response,
-
-           tt_response_root TYPE STANDARD TABLE OF ts_response WITH EMPTY KEY.
-
-    DATA lt_raw_response       TYPE tt_response_root.
-    DATA ls_cmr_create_request TYPE zpru_if_computer_vision=>ts_cmr_create_request.
-    DATA lt_header             TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
-    DATA lt_items              TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
-    DATA lt_creation_content   TYPE zpru_if_computer_vision=>tt_cmr_create_content.
-
-    /ui2/cl_json=>deserialize( EXPORTING json = iv_thinking_output
-                               CHANGING  data = lt_raw_response ).
-
-    IF lt_raw_response IS INITIAL.
-      RETURN.
-    ENDIF.
-
-    CASE is_first_tool-toolname.
-      WHEN `CREATE_CMR`.
-
-        LOOP AT lt_raw_response ASSIGNING FIELD-SYMBOL(<ls_message>).
-
-          APPEND INITIAL LINE TO lt_creation_content ASSIGNING FIELD-SYMBOL(<ls_cmrcreationrequest>).
-          <ls_cmrcreationrequest>-message = <ls_message>-messageid.
-
-          LOOP AT <ls_message>-attachments ASSIGNING FIELD-SYMBOL(<ls_attachment>).
-            LOOP AT <ls_attachment>-cmrheaders ASSIGNING FIELD-SYMBOL(<ls_raw_header>).
-              APPEND INITIAL LINE TO lt_header ASSIGNING FIELD-SYMBOL(<ls_header>).
-              <ls_header> = CORRESPONDING #( <ls_raw_header> ).
-
-              LOOP AT <ls_raw_header>-cmritems ASSIGNING FIELD-SYMBOL(<ls_raw_item>).
-                APPEND INITIAL LINE TO lt_items ASSIGNING FIELD-SYMBOL(<ls_item>).
-                <ls_item> = CORRESPONDING #( <ls_raw_item> ).
-                <ls_item>-cmrid = <ls_raw_header>-cmrid.
-              ENDLOOP.
-            ENDLOOP.
-          ENDLOOP.
-          <ls_cmrcreationrequest>-cmrheaders = lt_header.
-          <ls_cmrcreationrequest>-cmritems   = lt_items.
-
-        ENDLOOP.
-
-        ls_cmr_create_request-cmrcreationcontent = /ui2/cl_json=>serialize( data = lt_creation_content ).
-
-        er_first_tool_input = NEW zpru_if_computer_vision=>ts_cmr_create_request( ls_cmr_create_request ).
-      WHEN OTHERS.
-        RAISE EXCEPTION NEW zpru_cx_agent_core( ).
-    ENDCASE.
-  ENDMETHOD.
-
   METHOD process_thinking.
     " gemini input
     TYPES: BEGIN OF ts_inline_data,
@@ -416,6 +314,108 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     <ls_execution_plan>-toolname  = zpru_if_computer_vision=>cs_tools-create_warehouse_task.
 
     ev_langu = sy-langu.
+  ENDMETHOD.
+
+  METHOD prepare_first_tool_input.
+    TYPES: BEGIN OF ts_items,
+             itemposition       TYPE n LENGTH 4,
+             marksnumbers       TYPE char100,
+             packagecount       TYPE int4,
+             packingmethod      TYPE char100,
+             natureofgoods      TYPE char100,
+             statisticalnumber  TYPE char20,
+             weightunitfield    TYPE msehi,
+             volumeunitfield    TYPE msehi,
+             grossweight        TYPE p LENGTH 7 DECIMALS 3,
+             volume             TYPE p LENGTH 7 DECIMALS 3,
+             unitednationnumber TYPE char10,
+             hazardclass        TYPE char5,
+             packinggroup       TYPE char10,
+           END OF ts_items,
+
+           tt_items TYPE STANDARD TABLE OF ts_items WITH EMPTY KEY.
+
+    TYPES: BEGIN OF ts_headers,
+             cmrid             TYPE char10,
+             senderinfo        TYPE char255,
+             consigneeinfo     TYPE char255,
+             deliveryplace     TYPE char100,
+             takingoverplace   TYPE char100,
+             takingoverdate    TYPE dats,
+             carrierinfo       TYPE char255,
+             successivecarrier TYPE char255,
+             carrierreservice  TYPE char255,
+             senderinstruction TYPE char255,
+             cashondelivery    TYPE p LENGTH 8 DECIMALS 2,
+             currency          TYPE waers_curc,
+             establishedplace  TYPE char100,
+             establisheddate   TYPE dats,
+             createdby         TYPE char12,
+             createdat         TYPE timestampl,
+             lastchangedby     TYPE char12,
+             lastchangedat     TYPE timestampl,
+             cmritems          TYPE tt_items,
+           END OF ts_headers,
+
+           tt_headers TYPE STANDARD TABLE OF ts_headers WITH EMPTY KEY.
+
+    TYPES: BEGIN OF ts_attachment,
+             cmrheaders TYPE tt_headers,
+           END OF ts_attachment,
+
+           tt_attachments TYPE STANDARD TABLE OF ts_attachment WITH EMPTY KEY.
+
+    TYPES: BEGIN OF ts_response,
+             messageid   TYPE char32,
+             attachments TYPE tt_attachments,
+           END OF ts_response,
+
+           tt_response_root TYPE STANDARD TABLE OF ts_response WITH EMPTY KEY.
+
+    DATA lt_raw_response       TYPE tt_response_root.
+    DATA ls_cmr_create_request TYPE zpru_if_computer_vision=>ts_cmr_create_request.
+    DATA lt_header             TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
+    DATA lt_items              TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
+    DATA lt_creation_content   TYPE zpru_if_computer_vision=>tt_cmr_create_content.
+
+    /ui2/cl_json=>deserialize( EXPORTING json = iv_thinking_output
+                               CHANGING  data = lt_raw_response ).
+
+    IF lt_raw_response IS INITIAL.
+      RETURN.
+    ENDIF.
+
+    CASE is_first_tool-toolname.
+      WHEN `CREATE_CMR`.
+
+        LOOP AT lt_raw_response ASSIGNING FIELD-SYMBOL(<ls_message>).
+
+          APPEND INITIAL LINE TO lt_creation_content ASSIGNING FIELD-SYMBOL(<ls_cmrcreationrequest>).
+          <ls_cmrcreationrequest>-message = <ls_message>-messageid.
+
+          LOOP AT <ls_message>-attachments ASSIGNING FIELD-SYMBOL(<ls_attachment>).
+            LOOP AT <ls_attachment>-cmrheaders ASSIGNING FIELD-SYMBOL(<ls_raw_header>).
+              APPEND INITIAL LINE TO lt_header ASSIGNING FIELD-SYMBOL(<ls_header>).
+              <ls_header> = CORRESPONDING #( <ls_raw_header> ).
+
+              LOOP AT <ls_raw_header>-cmritems ASSIGNING FIELD-SYMBOL(<ls_raw_item>).
+                APPEND INITIAL LINE TO lt_items ASSIGNING FIELD-SYMBOL(<ls_item>).
+                <ls_item> = CORRESPONDING #( <ls_raw_item> ).
+                <ls_item>-cmrid = <ls_raw_header>-cmrid.
+              ENDLOOP.
+            ENDLOOP.
+          ENDLOOP.
+          <ls_cmrcreationrequest>-cmrheaders = lt_header.
+          <ls_cmrcreationrequest>-cmritems   = lt_items.
+
+        ENDLOOP.
+
+        ls_cmr_create_request-cmrcreationcontent = /ui2/cl_json=>serialize( data = lt_creation_content ).
+
+        er_first_tool_input = NEW zpru_if_computer_vision=>ts_cmr_create_request( ls_cmr_create_request ).
+      WHEN OTHERS.
+        RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+    ENDCASE.
   ENDMETHOD.
 
   METHOD read_data_4_thinking.
