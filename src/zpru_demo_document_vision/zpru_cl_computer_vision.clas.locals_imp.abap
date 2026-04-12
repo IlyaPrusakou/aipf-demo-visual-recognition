@@ -1413,22 +1413,21 @@ ENDCLASS.
 
 CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
   METHOD execute_code_int.
-    DATA lt_headers_all               TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
-    DATA lt_items_all                 TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
-    DATA lt_inb_delivery_create_head  TYPE TABLE FOR CREATE zprur_inbhdr\\inbhdr.
-    DATA lt_inb_delivery_create_item  TYPE TABLE FOR CREATE zprur_inbhdr\\inbhdr\_inbitm.
-    DATA lt_inb_delivery_header_ctx   TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
-    DATA lt_inb_delivery_item_ctx     TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
+    DATA lt_headers_all              TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
+    DATA lt_items_all                TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
+    DATA lt_inb_delivery_create_head TYPE TABLE FOR CREATE zprur_inbhdr\\inbhdr.
+    DATA lt_inb_delivery_create_item TYPE TABLE FOR CREATE zprur_inbhdr\\inbhdr\_inbitm.
+    DATA lt_inb_delivery_header_ctx  TYPE zpru_if_computer_vision=>tt_inb_delivery_header_context.
+    DATA lt_inb_delivery_item_ctx    TYPE zpru_if_computer_vision=>tt_inb_delivery_item_context.
 *    DATA lt_creation_content          TYPE zpru_if_computer_vision=>tt_inb_delivery_create_content.
-    DATA lt_cmr_header TYPE zpru_if_computer_vision=>tt_cmr_header_context.
-    DATA lt_cmr_item TYPE zpru_if_computer_vision=>tt_cmr_item_context.
-
+    DATA lt_cmr_header               TYPE zpru_if_computer_vision=>tt_cmr_header_context.
+    DATA lt_cmr_item                 TYPE zpru_if_computer_vision=>tt_cmr_item_context.
 
     FIELD-SYMBOLS <ls_inb_delivery_create> TYPE zpru_if_computer_vision=>ts_inb_delivery_create_request.
-      FIELD-SYMBOLS <ls_cmr> TYPE LINE OF zpru_if_computer_vision=>tt_cmr_header_context.
-      FIELD-SYMBOLS <ls_hdr_out> TYPE LINE OF zpru_if_computer_vision=>tt_inb_delivery_header_context.
-      FIELD-SYMBOLS <ls_cmr_item> TYPE LINE OF zpru_if_computer_vision=>tt_cmr_item_context.
-      FIELD-SYMBOLS <ls_item_out> TYPE LINE OF zpru_if_computer_vision=>tt_inb_delivery_item_context.
+    FIELD-SYMBOLS <ls_cmr>                 TYPE LINE OF zpru_if_computer_vision=>tt_cmr_header_context.
+    FIELD-SYMBOLS <ls_hdr_out>             TYPE LINE OF zpru_if_computer_vision=>tt_inb_delivery_header_context.
+    FIELD-SYMBOLS <ls_cmr_item>            TYPE LINE OF zpru_if_computer_vision=>tt_cmr_item_context.
+    FIELD-SYMBOLS <ls_item_out>            TYPE LINE OF zpru_if_computer_vision=>tt_inb_delivery_item_context.
 
     ASSIGN is_input->* TO <ls_inb_delivery_create>.
     IF sy-subrc <> 0.
@@ -1479,7 +1478,7 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
 *      ENDTRY.
       " Map header fields from working header table to inbound delivery header
 
-      <ls_create_head>-%cid = '1'.
+      <ls_create_head>-%cid         = '1'.
       <ls_create_head>-deliveryid   = <ls_header_entity>-deliveryid.
       <ls_create_head>-vendor       = <ls_header_entity>-vendor.
       <ls_create_head>-consignee    = <ls_header_entity>-consignee.
@@ -1492,15 +1491,15 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
         APPEND INITIAL LINE TO lt_inb_delivery_create_item ASSIGNING FIELD-SYMBOL(<ls_create_item>).
         <ls_create_item>-%cid_ref = '1'.
         APPEND INITIAL LINE TO <ls_create_item>-%target ASSIGNING FIELD-SYMBOL(<ls_item_target>).
-        <ls_item_target>-deliveryid  = <ls_item_entity>-deliveryid.
-        <ls_item_target>-itempos     = <ls_item_entity>-itempos.
+        <ls_item_target>-deliveryid   = <ls_item_entity>-deliveryid.
+        <ls_item_target>-itempos      = <ls_item_entity>-itempos.
         <ls_item_target>-materialdesc = <ls_item_entity>-materialdesc.
-        <ls_item_target>-quantity    = <ls_item_entity>-quantity.
-        <ls_item_target>-unit        = <ls_item_entity>-unit.
-        <ls_item_target>-grossweight = <ls_item_entity>-grossweight.
-        <ls_item_target>-weightunit  = <ls_item_entity>-weightunit.
-        <ls_item_target>-hazardclass = <ls_item_entity>-hazardclass.
-        <ls_item_target>-%cid = lv_item_cid.
+        <ls_item_target>-quantity     = <ls_item_entity>-quantity.
+        <ls_item_target>-unit         = <ls_item_entity>-unit.
+        <ls_item_target>-grossweight  = <ls_item_entity>-grossweight.
+        <ls_item_target>-weightunit   = <ls_item_entity>-weightunit.
+        <ls_item_target>-hazardclass  = <ls_item_entity>-hazardclass.
+        <ls_item_target>-%cid         = lv_item_cid.
 
         lv_item_cid += 1.
       ENDLOOP.
@@ -1518,6 +1517,7 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
            FROM lt_inb_delivery_create_item
            MAPPED DATA(ls_mapped)
            FAILED DATA(ls_failed)
+           " TODO: variable is assigned but never used (ABAP cleaner)
            REPORTED DATA(ls_reported).
 
     IF ls_failed IS NOT INITIAL.
@@ -1592,22 +1592,16 @@ CLASS lcl_adf_find_storage_bin IMPLEMENTATION.
                                  CHANGING  data          = lt_inb_items ).
     ENDIF.
 
-    " Read storage bins from ZPRU_DEMO_STOR_BIN folder (ZPRUSTORBIN table)
     SELECT * FROM zprustorbin
-      WHERE is_blocked = @abap_false ORDER BY bin_id
-      INTO CORRESPONDING FIELDS OF TABLE @lt_storage_bins .
-
+      WHERE is_blocked = @abap_false
+      ORDER BY bin_id
+      INTO CORRESPONDING FIELDS OF TABLE @lt_storage_bins.
     IF sy-subrc = 0.
-      " Simple logic: for demonstration, return all unblocked storage bins
-      " In a real scenario, you would match based on CMR/inbound delivery data
-      " For example: match weight requirements, dimensions, etc.
       lt_storage_bins_out = lt_storage_bins.
     ELSE.
-      " No storage bins found - return empty table
       CLEAR lt_storage_bins_out.
     ENDIF.
 
-    " Output the storage bins to context
     APPEND INITIAL LINE TO et_key_value_pairs ASSIGNING FIELD-SYMBOL(<ls_kv>).
     <ls_kv>-name  = zpru_if_computer_vision=>cs_context_field-storagebins-field_name.
     <ls_kv>-value = /ui2/cl_json=>serialize( data     = lt_storage_bins_out
@@ -1623,9 +1617,9 @@ CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
     DATA lt_storage_bins        TYPE zpru_if_computer_vision=>tt_storage_bin_context.
     DATA lt_warehouse_tasks_rap TYPE TABLE FOR CREATE zprur_task\\task.
     DATA lt_warehouse_tasks_out TYPE zpru_if_computer_vision=>tt_warehouse_task_context.
-    DATA lt_created_tasks       TYPE STANDARD TABLE OF zprutask WITH EMPTY KEY.
     DATA lv_task_counter        TYPE i VALUE 1.
     DATA lv_max_tanum           TYPE char10.
+    DATA lv_storage_bin         TYPE string.
 
     FIELD-SYMBOLS <ls_input> TYPE zpru_if_computer_vision=>ts_create_whse_task_request.
 
@@ -1658,21 +1652,17 @@ CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
       INTO @lv_max_tanum.
     DATA(lv_next_tanum_num) = CONV i( lv_max_tanum ) + 1.
 
-    " Create warehouse tasks for each inbound delivery item
     LOOP AT lt_inb_items ASSIGNING FIELD-SYMBOL(<ls_inb_item>).
-      " Find the corresponding header for delivery ID
-      READ TABLE lt_inb_headers ASSIGNING FIELD-SYMBOL(<ls_inb_header>)
-        WITH KEY uuid = <ls_inb_item>-parent_uuid.
+      ASSIGN lt_inb_headers[ uuid = <ls_inb_item>-parent_uuid ] TO FIELD-SYMBOL(<ls_inb_header>).
       IF sy-subrc <> 0.
         CONTINUE.
       ENDIF.
 
-      " Find an available storage bin (unblocked) for destination
-      READ TABLE lt_storage_bins ASSIGNING FIELD-SYMBOL(<ls_storage_bin>)
-        WITH KEY is_blocked = abap_false.
+      ASSIGN lt_storage_bins[ is_blocked = abap_false ] TO FIELD-SYMBOL(<ls_storage_bin>).
       IF sy-subrc <> 0.
-        " No unblocked storage bin found, use default
-        CONTINUE.
+        lv_storage_bin = `CLEAR`.
+      ELSE.
+        lv_storage_bin = <ls_storage_bin>-bin_id.
       ENDIF.
 
       APPEND INITIAL LINE TO lt_warehouse_tasks_rap ASSIGNING FIELD-SYMBOL(<ls_task_rap>).
@@ -1680,17 +1670,17 @@ CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
           <ls_task_rap>-uuid = cl_system_uuid=>create_uuid_x16_static( ).
         CATCH cx_uuid_error.
       ENDTRY.
-      <ls_task_rap>-%cid = |TASK{ lv_task_counter }|.
-      <ls_task_rap>-tanum = |T{ lv_next_tanum_num }|.
+      <ls_task_rap>-%cid       = |TASK{ lv_task_counter }|.
+      <ls_task_rap>-tanum      = |T{ lv_next_tanum_num }|.
       <ls_task_rap>-deliveryid = <ls_inb_header>-deliveryid.
-      <ls_task_rap>-itempos = <ls_inb_item>-itempos.
-*      <ls_task_rap>-material = <ls_inb_item>-material. qqq
-      <ls_task_rap>-quantity = <ls_inb_item>-quantity.
-      <ls_task_rap>-unit = <ls_inb_item>-unit.
+      <ls_task_rap>-itempos    = <ls_inb_item>-itempos.
+      <ls_task_rap>-material   = <ls_inb_item>-materialdesc.
+      <ls_task_rap>-quantity   = <ls_inb_item>-quantity.
+      <ls_task_rap>-unit       = <ls_inb_item>-unit.
       " Use 'RECEIVING' as source bin (goods arrive here)
-      <ls_task_rap>-sourcebin = 'RECEIVING'.
-      <ls_task_rap>-destbin = <ls_storage_bin>-bin_id.
-      <ls_task_rap>-confstatus = 'OPEN'.
+      <ls_task_rap>-sourcebin  = 'RECEIVING'.
+      <ls_task_rap>-destbin    = lv_storage_bin.
+      <ls_task_rap>-confstatus = 'O'.
       GET TIME STAMP FIELD <ls_task_rap>-createdat.
       <ls_task_rap>-%control = VALUE #( uuid       = if_abap_behv=>mk-on
                                         tanum      = if_abap_behv=>mk-on
@@ -1722,6 +1712,7 @@ CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
            CREATE FROM lt_warehouse_tasks_rap
            MAPPED DATA(ls_mapped)
            FAILED DATA(ls_failed)
+           " TODO: variable is assigned but never used (ABAP cleaner)
            REPORTED DATA(ls_reported).
 
     IF ls_failed IS NOT INITIAL.
