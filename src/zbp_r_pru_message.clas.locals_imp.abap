@@ -67,7 +67,7 @@ CLASS lhc_zr_pru_message IMPLEMENTATION.
                                             iv_is_rap_context   = abap_true
                                   IMPORTING ev_built_run_uuid   = DATA(lv_built_run_uuid)
                                             ev_built_query_uuid = DATA(lv_built_query_uuid)
-                                            ev_environment_uuid = data(lv_environment_uuid) ).
+                                            ev_environment_uuid = DATA(lv_environment_uuid) ).
 
         lo_agent->run_execution( EXPORTING iv_built_run_uuid      = lv_built_run_uuid
                                            iv_built_query_uuid    = lv_built_query_uuid
@@ -131,6 +131,26 @@ CLASS lhc_zr_pru_message IMPLEMENTATION.
 
     IF lt_message_step_crt IS INITIAL.
       RETURN.
+    ENDIF.
+
+    READ ENTITIES OF zr_pru_message
+         IN LOCAL MODE
+         ENTITY zrprumessage BY \_messagestep
+         FROM VALUE #( FOR <ls_k3> IN keys
+                       ( messageid          = <ls_k3>-messageid
+                         %is_draft          = <ls_k3>-%is_draft
+                         %control-messageid = if_abap_behv=>mk-on ) )
+         RESULT DATA(lt_message_existing_steps).
+
+    IF lt_message_existing_steps IS NOT INITIAL.
+
+      MODIFY ENTITIES OF zr_pru_message
+      IN LOCAL MODE
+      ENTITY zrprumessagestep
+      DELETE FROM VALUE #( FOR <ls_k4> IN lt_message_existing_steps ( %tky = <ls_k4>-%tky  ) )
+      REPORTED DATA(ls_reported_del)
+      FAILED DATA(ls_failed_del).
+
     ENDIF.
 
     MODIFY ENTITIES OF zr_pru_message
