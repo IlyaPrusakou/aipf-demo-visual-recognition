@@ -83,6 +83,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     ENDIF.
 
     /ui2/cl_json=>deserialize( EXPORTING json = is_input_prompt-string_content
+                                         hex_as_base64 = abap_false
                                CHANGING  data = <ls_payload> ).
 
     CREATE DATA ls_abap_payload.
@@ -182,6 +183,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     ENDLOOP.
 
     lv_string_payload = /ui2/cl_json=>serialize( data        = ls_abap_payload
+                                                 hex_as_base64 = abap_false
                                                  pretty_name = /ui2/cl_json=>pretty_mode-low_case
                                                  compress    = abap_true ).
 
@@ -204,6 +206,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 *    DATA(lv_gemini_output) = lo_response->get_text( ).
 *
 *    /ui2/cl_json=>deserialize( EXPORTING json = lv_gemini_output
+*                                hex_as_base64 = abap_false
 *                               CHANGING  data = ls_llm_output ).
 *
 *    DATA(lv_raw_response) = VALUE #( ls_llm_output-candidates[ 1 ]-content-parts[ 1 ]-text OPTIONAL ).
@@ -379,6 +382,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     DATA lt_creation_content   TYPE zpru_if_computer_vision=>tt_cmr_create_content.
 
     /ui2/cl_json=>deserialize( EXPORTING json = iv_thinking_output
+                                         hex_as_base64 = abap_false
                                CHANGING  data = lt_raw_response ). " qqq check how dates transformed
 
     IF lt_raw_response IS INITIAL.
@@ -415,7 +419,8 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 
         ENDLOOP.
 
-        ls_cmr_create_request-cmrcreationcontent = /ui2/cl_json=>serialize( data = lt_creation_content ).
+        ls_cmr_create_request-cmrcreationcontent = /ui2/cl_json=>serialize( data = lt_creation_content
+                                                                            hex_as_base64 = abap_false ).
 
         er_first_tool_input = NEW zpru_if_computer_vision=>ts_cmr_create_request( ls_cmr_create_request ).
       WHEN OTHERS.
@@ -486,6 +491,7 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     SORT io_controller->mt_input_output BY number ASCENDING.
     DATA(ls_input_prompt) = VALUE #( io_controller->mt_input_output[ 1 ]-input_prompt OPTIONAL ).
     /ui2/cl_json=>deserialize( EXPORTING json = ls_input_prompt-string_content
+                                         hex_as_base64 = abap_false
                                CHANGING  data = ls_doc_recognition ).
 
     " Build one runtime entry per message
@@ -497,7 +503,8 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
       <ls_runtime>-steps   = CORRESPONDING #( lt_axc_steps ).
     ENDLOOP.
 
-    cs_final_response_body-responsecontent = /ui2/cl_json=>serialize( data = ls_recognition_output ).
+    cs_final_response_body-responsecontent = /ui2/cl_json=>serialize( data = ls_recognition_output
+                                                                      hex_as_base64 = abap_false ).
 
     cs_final_response_body-type            = `\CLASS=ZBP_R_PRU_MESSAGE\TYPE=TS_RECOGNITION_OUTPUT`.
 
@@ -740,6 +747,7 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
       RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDIF.
     /ui2/cl_json=>deserialize( EXPORTING json = <ls_cmr_create>-cmrcreationcontent
+                                         hex_as_base64 = abap_false
                                CHANGING  data = lt_creation_content ).
 
     LOOP AT lt_creation_content ASSIGNING FIELD-SYMBOL(<ls_cmrcreationcontent>).
@@ -1619,9 +1627,11 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
       RAISE EXCEPTION NEW zpru_cx_agent_core( ).
     ENDIF.
     /ui2/cl_json=>deserialize( EXPORTING json = <ls_inb_delivery_create>-cmrheaders
+                                         hex_as_base64 = abap_false
                                CHANGING  data = lt_cmr_header ).
 
     /ui2/cl_json=>deserialize( EXPORTING json = <ls_inb_delivery_create>-cmritems
+                                         hex_as_base64 = abap_false
                                CHANGING  data = lt_cmr_item ).
 
     SELECT MAX( deliveryid ) FROM zprur_inbhdr
@@ -1869,7 +1879,7 @@ CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
 
       APPEND INITIAL LINE TO lt_warehouse_tasks_rap ASSIGNING FIELD-SYMBOL(<ls_task_rap>).
       <ls_task_rap>-%cid       = |TASK{ lv_task_counter }|.
-      <ls_task_rap>-tanum      = |T{ lv_next_tanum_num }|.
+      <ls_task_rap>-tanum      = lv_next_tanum_num.
       <ls_task_rap>-deliveryid = <ls_inb_header>-deliveryid.
       <ls_task_rap>-itempos    = <ls_inb_item>-itempos.
       <ls_task_rap>-material   = <ls_inb_item>-materialdesc.
