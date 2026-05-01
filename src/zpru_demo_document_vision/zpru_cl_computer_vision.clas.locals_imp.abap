@@ -20,6 +20,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
       lo_http_request->set_text( i_text = lv_string_payload ).
     ENDIF.
 
+*    set_http_request_body( EXPORTING io_http_client = lo_http_client
+*                                    iv_json_payload   = lv_string_payload ).
+*
+
     DATA(lv_raw_response) = get_mock_test_response( ).
     strip_markdown_wrappers( CHANGING cv_response = lv_raw_response ).
 
@@ -180,7 +184,10 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_attachment_images.
-    ASSIGN io_input_payload->* TO FIELD-SYMBOL(<ls_payload>).
+
+    FIELD-SYMBOLS: <ls_payload> TYPE zbp_r_pru_message=>ts_doc_recognition.
+
+    ASSIGN io_input_payload->* TO <ls_payload>.
     IF sy-subrc <> 0.
       RETURN.
     ENDIF.
@@ -285,14 +292,14 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD prepare_first_tool_input.
-    DATA(lt_raw_response) = parse_thinking_output_to_cmr_response( iv_thinking_output ).
+    DATA(lt_raw_response) = parse_think_output_2_cmr_resp( iv_thinking_output ).
     IF lt_raw_response IS INITIAL.
       RETURN.
     ENDIF.
 
     CASE is_first_tool-toolname.
       WHEN `CREATE_CMR`.
-        DATA(lt_creation_content) = map_response_to_creation_content( lt_raw_response ).
+        DATA(lt_creation_content) = map_response_2_creat_content( lt_raw_response ).
 
         DATA(ls_cmr_create_request) = VALUE zpru_if_computer_vision=>ts_cmr_create_request(
             cmrcreationcontent = /ui2/cl_json=>serialize( data          = lt_creation_content
@@ -305,13 +312,13 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
     ENDCASE.
   ENDMETHOD.
 
-  METHOD parse_thinking_output_to_cmr_response.
+  METHOD parse_think_output_2_cmr_resp.
     /ui2/cl_json=>deserialize( EXPORTING json           = iv_thinking_output
                                          hex_as_base64  = abap_false
                                CHANGING  data           = rt_response ).
   ENDMETHOD.
 
-  METHOD map_response_to_creation_content.
+  METHOD map_response_2_creat_content.
     DATA lt_header TYPE STANDARD TABLE OF zpru_cmr_header WITH EMPTY KEY.
     DATA lt_items  TYPE STANDARD TABLE OF zpru_cmr_item WITH EMPTY KEY.
 
@@ -471,6 +478,26 @@ CLASS lcl_adf_decision_provider IMPLEMENTATION.
 
   METHOD set_result_comment.
     rv_result_comment = `Document Visual Recognition processing finished`.
+  ENDMETHOD.
+
+  METHOD set_http_request_body.
+*    TRY.
+*        DATA(lo_response) = lo_http_client->execute( i_method = if_web_http_client=>post ).
+*      CATCH cx_web_http_client_error.
+*        RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+*    ENDTRY.
+*
+*    IF lo_response->get_status( )-code <> `200`.
+*      RAISE EXCEPTION NEW zpru_cx_agent_core( ).
+*    ENDIF.
+*
+*    DATA(lv_gemini_output) = lo_response->get_text( ).
+*
+*    /ui2/cl_json=>deserialize( EXPORTING json = lv_gemini_output
+*                                hex_as_base64 = abap_false
+*                               CHANGING  data = ls_llm_output ).
+*
+*    DATA(lv_raw_response) = VALUE #( ls_llm_output-candidates[ 1 ]-content-parts[ 1 ]-text OPTIONAL ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -921,8 +948,9 @@ CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lt_cmr_alert_context) = persist_alerts_via_rap(
+    persist_alerts_via_rap(
                                      EXPORTING it_alerts    = lt_alert_rap
+                                     IMPORTING et_alerts   = DATA(lt_cmr_alert_context)
                                      CHANGING  ev_error_flag = ev_error_flag ).
 
     IF ev_error_flag = abap_true.
@@ -1174,6 +1202,9 @@ CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD persist_alerts_via_rap.
+
+    CLEAR: et_alerts.
+
     MODIFY ENTITIES OF zr_pru_cmr_alert
            ENTITY zrprucmralert
            CREATE FROM it_alerts
@@ -1190,7 +1221,7 @@ CLASS lcl_adf_classify_danger_goods IMPLEMENTATION.
          ALL FIELDS WITH CORRESPONDING #( ls_mapped_alert-zrprucmralert )
          RESULT DATA(lt_alert_create).
 
-    rt_alerts = CORRESPONDING #( lt_alert_create MAPPING FROM ENTITY ).
+    et_alerts = CORRESPONDING #( lt_alert_create MAPPING FROM ENTITY ).
   ENDMETHOD.
 
   METHOD append_alert_output.
@@ -1237,7 +1268,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                              ct_findings_rap = lt_findings_rap
                                              cv_cid_counter  = lv_cid_counter ).
 
-      validate_header_takingoverplace( EXPORTING is_header      = <ls_hdr>
+      validate_head_takingoverplace( EXPORTING is_header      = <ls_hdr>
                                        CHANGING  ct_findings    = lt_findings_out
                                                  ct_findings_rap = lt_findings_rap
                                                  cv_cid_counter  = lv_cid_counter ).
@@ -1328,8 +1359,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_header_senderinfo.
     IF is_header-senderinfo IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INCOMPLETE'
@@ -1358,15 +1395,21 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_finding_to_output.
-    GET TIME STAMP FIELD is_finding_rap-createdat.
-    MOVE-CORRESPONDING is_finding_rap TO DATA(ls_finding_out).
-    APPEND ls_finding_out TO ct_findings.
+    DATA(ls_finding) = is_finding_rap .
+    GET TIME STAMP FIELD ls_finding-createdat.
+    APPEND ls_finding TO ct_findings.
   ENDMETHOD.
 
   METHOD validate_header_consigneeinfo.
     IF is_header-consigneeinfo IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INCOMPLETE'
@@ -1395,8 +1438,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_header_carrierinfo.
     IF is_header-carrierinfo IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INCOMPLETE'
@@ -1423,10 +1472,16 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD validate_header_takingoverplace.
+  METHOD validate_head_takingoverplace.
     IF is_header-takingoverplace IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INCOMPLETE'
@@ -1455,8 +1510,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_header_deliveryplace.
     IF is_header-deliveryplace IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INCOMPLETE'
@@ -1485,8 +1546,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_header_takingoverdate.
     IF is_header-takingoverdate IS INITIAL OR is_header-takingoverdate = '00000000'.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INCOMPLETE'
@@ -1515,8 +1582,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_header_currency.
     IF is_header-cashondelivery > 0 AND is_header-currency IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INCOMPLETE'
@@ -1549,8 +1622,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                     WHERE ( cmruuid = is_header-cmruuid )
                                     NEXT n = n + 1 ).
     IF lv_item_count = 0.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    findingstatus = 'INVALID'
@@ -1579,8 +1658,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_item_natureofgoods.
     IF is_item-natureofgoods IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    cmritemuuid   = is_item-cmritemuuid
@@ -1613,8 +1698,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_item_grossweight.
     IF is_item-grossweight <= 0.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    cmritemuuid   = is_item-cmritemuuid
@@ -1647,8 +1738,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
 
   METHOD validate_item_weightunit.
     IF is_item-weightunitfield IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    cmritemuuid   = is_item-cmritemuuid
@@ -1685,8 +1782,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
     ENDIF.
 
     IF is_item-unitednationnumber IS INITIAL.
+
+      TRY.
+          DATA(lv_findinguuid) = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    cmritemuuid   = is_item-cmritemuuid
@@ -1717,8 +1820,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
     ENDIF.
 
     IF is_item-hazardclass IS INITIAL.
+
+      TRY.
+          lv_findinguuid = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    cmritemuuid   = is_item-cmritemuuid
@@ -1749,8 +1858,14 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
     ENDIF.
 
     IF is_item-packinggroup IS INITIAL.
+
+      TRY.
+          lv_findinguuid = cl_system_uuid=>create_uuid_x16_static( ).
+        CATCH cx_uuid_error.
+      ENDTRY.
+
       add_finding_to_output( EXPORTING is_finding_rap = VALUE #(
-                                   findinguuid   = cl_system_uuid=>create_uuid_x16_static( )
+                                   findinguuid   = lv_findinguuid
                                    cmruuid       = is_header-cmruuid
                                    cmrid         = is_header-cmrid
                                    cmritemuuid   = is_item-cmritemuuid
@@ -1851,7 +1966,7 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
                                  IMPORTING et_headers_all = lt_headers_all
                                            et_items_all   = lt_items_all ).
 
-    DATA(lt_create_head) = prepare_delivery_header_entities( lt_headers_all ).
+    DATA(lt_create_head) = prepare_delivery_head_entities( lt_headers_all ).
     DATA(lt_create_item) = prepare_delivery_item_entities( lt_items_all ).
 
     IF lt_create_head IS INITIAL.
@@ -1932,7 +2047,7 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
-  METHOD prepare_delivery_header_entities.
+  METHOD prepare_delivery_head_entities.
     LOOP AT it_headers ASSIGNING FIELD-SYMBOL(<ls_header>).
       APPEND INITIAL LINE TO rt_create ASSIGNING FIELD-SYMBOL(<ls_entity>).
       <ls_entity>-%cid         = '1'.
@@ -2090,8 +2205,9 @@ CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
       RETURN.
     ENDIF.
 
-    DATA(lt_warehouse_tasks_out) = persist_tasks_via_rap(
+    persist_tasks_via_rap(
                                        EXPORTING it_tasks      = lt_warehouse_tasks_rap
+                                       IMPORTING et_tasks      = DATA(lt_warehouse_tasks_out)
                                        CHANGING  ev_error_flag = ev_error_flag ).
 
     IF ev_error_flag = abap_true.
@@ -2195,7 +2311,7 @@ CLASS lcl_adf_create_warehouse_task IMPLEMENTATION.
          ALL FIELDS WITH CORRESPONDING #( ls_mapped-task )
          RESULT DATA(lt_created_tasks).
 
-    rt_tasks = CORRESPONDING #( lt_created_tasks MAPPING FROM ENTITY ).
+    et_tasks = CORRESPONDING #( lt_created_tasks MAPPING FROM ENTITY ).
   ENDMETHOD.
 
   METHOD append_wh_task_output.
