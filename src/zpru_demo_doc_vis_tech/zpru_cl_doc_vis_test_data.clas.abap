@@ -34,7 +34,8 @@ CLASS zpru_cl_doc_vis_test_data IMPLEMENTATION.
                           shortmemoryprovider  = 'ZPRU_CL_COMPUTER_VISION'
                           longmemoryprovider   = 'ZPRU_CL_COMPUTER_VISION'
                           agentinfoprovider    = 'ZPRU_CL_COMPUTER_VISION'
-                          systempromptprovider = 'ZPRU_CL_COMPUTER_VISION'  ) ).
+                          systempromptprovider = 'ZPRU_CL_COMPUTER_VISION'
+                          agentmapper          = 'ZPRU_CL_COMPUTER_VISION' ) ).
     TRY.
         lt_agent_tool = VALUE #( ( tooluuid           = cl_system_uuid=>create_uuid_x16_static( )
                                    agentuuid          = lv_agent_uuid1

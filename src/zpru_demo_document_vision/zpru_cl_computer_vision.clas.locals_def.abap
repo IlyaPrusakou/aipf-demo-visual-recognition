@@ -193,6 +193,10 @@ CLASS lcl_adf_syst_prompt_provider DEFINITION INHERITING FROM zpru_cl_syst_prmpt
     METHODS set_arbitrary_text       REDEFINITION.
 ENDCLASS.
 
+CLASS lcl_adf_agent_mapper DEFINITION INHERITING FROM zpru_cl_agent_mapper CREATE PUBLIC.
+  PROTECTED SECTION.
+ENDCLASS.
+
 CLASS lcl_adf_create_cmr DEFINITION INHERITING FROM zpru_cl_abap_executor CREATE PUBLIC.
   PROTECTED SECTION.
 

@@ -749,6 +749,8 @@ CLASS lcl_adf_syst_prompt_provider IMPLEMENTATION.
 
 ENDCLASS.
 
+CLASS lcl_adf_agent_mapper IMPLEMENTATION.
+ENDCLASS.
 
 CLASS lcl_adf_create_cmr IMPLEMENTATION.
 
