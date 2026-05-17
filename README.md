@@ -83,16 +83,7 @@ Everything is persisted in the system — no data is lost, and you can always lo
 | **Dangerous goods detection** | Automatic safety checks — no risk of missing hazardous material labels |
 | **Data validation** | Catches errors and missing fields before they cause problems downstream |
 | **Everything saved in the system** | All results are stored in SAP, fully auditable and traceable |
-| **6-step workflow in seconds** | What would take a human clerk 15-20 minutes happens almost instantly |
-
----
-
-## What Do You Need to Use It?
-
-- An **SAP system** (on-premise, private cloud, or BTP)
-- You install the **Agent Framework** and the **Vision Agent** via abapGit (standard SAP tooling)
-- Run a simple setup script to register the agent
-- That's it — the agent is ready to use
+| **Complex workflow** | What would take a human clerk 15-20 minutes happens almost instantly |
 
 ---
 
