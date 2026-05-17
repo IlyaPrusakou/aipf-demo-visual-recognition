@@ -59,7 +59,7 @@ Eventually, you will recieve the following definition of vision recognition agen
 
 ---
 
-# Document Vision Agent — User Experience Summary
+# Document Vision Agent — User Experience
 
 ## What Is It?
 
