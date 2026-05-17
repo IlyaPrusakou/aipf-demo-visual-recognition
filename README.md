@@ -2,7 +2,7 @@
 Demo app
 
 ## Prerequisites:
-1. BTP, on-premise, private cloud system
+1. BTP, on-premise, private or public cloud system
 2. ADT Tools in Eclipse
 3. abapGit
 
