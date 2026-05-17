@@ -21,6 +21,86 @@ Eventually, you will recieve the following definition of vision recognition agen
 3. Agent Tools Definition Table ZPRU_AGENT_TOOL:
 <img width="1480" height="257" alt="image" src="https://github.com/user-attachments/assets/42a47a36-dccb-49db-bb67-98d830c70157" />
 
+# Document Vision Agent — User Experience Summary
+
+## What Is It?
+
+The **Document Vision Agent** is a smart assistant that can look at scanned shipping documents (like a CMR waybill), read the information from them, and automatically perform all the warehouse follow-up tasks — without any manual data entry.
+
+Think of it as a digital warehouse clerk who can glance at a paper document, understand everything on it, and then take care of all the necessary steps to process the shipment.
+
+---
+
+## How It Works (Demo Experience)
+
+### Step 1: Upload a Scanned Document
+You provide a scanned CMR document (a standard international shipping waybill) as an image. The agent accepts the image through a simple interface — you just attach the picture and send.
+
+### Step 2: The Agent "Reads" the Document
+Behind the scenes, the agent's AI looks at the image just like a human would. It reads:
+- Who sent the goods (sender/shipper info)
+- Who receives them (consignee)
+- Who is transporting them (carrier)
+- Where the goods are picked up and delivered
+- What items are in the shipment (description, weight, quantity)
+- Any special markings like hazard warnings
+
+### Step 3: Automated Warehouse Processing
+Once the document is understood, the agent automatically performs a complete end-to-end warehouse workflow:
+
+| What Happens | Why It Matters |
+|---|---|
+| **CMR Record Created** | The document details are saved in the system as a formal CMR record |
+| **Dangerous Goods Checked** | Items are scanned for hazardous materials (chemicals, explosives, flammable goods, etc.) — any risks are flagged immediately |
+| **Data Validated** | The agent checks that all required fields are filled in correctly and flags anything missing or wrong |
+| **Inbound Delivery Created** | The shipment is converted into an inbound delivery order, ready for the warehouse team |
+| **Storage Found** | The system checks which warehouse storage bins are available and free |
+| **Putaway Task Generated** | A warehouse task is created telling staff exactly where to store each item |
+
+### Step 4: Results You Can See
+At the end, you get a clear summary showing:
+- ✅ The CMR document has been created and saved
+- ⚠️ Any dangerous goods alerts (if hazardous items were detected)
+- ✅ / ❌ Validation status (whether the document is complete and correct)
+- 📦 The inbound delivery is ready
+- 📍 Suggested storage locations
+- 🔧 Warehouse tasks have been created
+
+Everything is persisted in the system — no data is lost, and you can always look up past processing results.
+
+---
+
+## What Makes It Special from a User's Perspective?
+
+| Feature | Benefit |
+|---|---|
+| **One-click document processing** | No manual typing. Just upload an image and everything is handled automatically |
+| **End-to-end automation** | From a scanned paper to warehouse tasks in one seamless flow |
+| **Dangerous goods detection** | Automatic safety checks — no risk of missing hazardous material labels |
+| **Data validation** | Catches errors and missing fields before they cause problems downstream |
+| **Everything saved in the system** | All results are stored in SAP, fully auditable and traceable |
+| **6-step workflow in seconds** | What would take a human clerk 15-20 minutes happens almost instantly |
+
+---
+
+## What Do You Need to Use It?
+
+- An **SAP system** (on-premise, private cloud, or BTP)
+- You install the **Agent Framework** and the **Vision Agent** via abapGit (standard SAP tooling)
+- Run a simple setup script to register the agent
+- That's it — the agent is ready to use
+
+---
+
+## In Simple Terms
+
+> **"Upload a scanned shipping document → Get a fully processed inbound delivery with warehouse tasks, safety checks, and validation — no manual work required."**
+
+The Document Vision Agent turns a paper document into a complete digital warehouse workflow in seconds.
+
+
+
+
 # Visual Recognition Agent — Technical Summary
 
 ## Overview
