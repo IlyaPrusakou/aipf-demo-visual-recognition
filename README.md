@@ -3,7 +3,7 @@
 It is demo app made for core framework Agent Integration Processing Framework.
 Git repo is https://github.com/IlyaPrusakou/aipf.git
 
-<img width="1355" height="862" alt="image" src="https://github.com/user-attachments/assets/aa7aceae-f1c5-45cc-9267-bfa5c9728a67" />
+<img width="1000" height="636" alt="image" src="https://github.com/user-attachments/assets/aa7aceae-f1c5-45cc-9267-bfa5c9728a67" />
 
 ## Prerequisites:
 1. BTP, on-premise, private or public cloud system
