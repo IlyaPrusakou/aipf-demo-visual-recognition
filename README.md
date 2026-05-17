@@ -22,12 +22,20 @@ Eventually, you will recieve the following definition of vision recognition agen
 1. Agent Type Table `ZPRU_AGENT_TYPE`:
 
 <img width="1112" height="122" alt="image" src="https://github.com/user-attachments/assets/30f098ee-2ad6-467d-bf4f-63cf714f231c" />
+
+---
+
 2. Agent Definition Table `ZPRU_AGENT`:
 
 <img width="1630" height="125" alt="image" src="https://github.com/user-attachments/assets/baa159b1-8716-4f49-81e5-8c48fab24c30" />
+
+---
+
 3. Agent Tools Definition Table `ZPRU_AGENT_TOOL`:
 
 <img width="1480" height="257" alt="image" src="https://github.com/user-attachments/assets/42a47a36-dccb-49db-bb67-98d830c70157" />
+
+---
 
 # Document Vision Agent — User Experience Summary
 
