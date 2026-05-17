@@ -1,9 +1,19 @@
 # CMR Visual Recognition & Warehouse Automation
 
-It is demo app made for core framework Agent Integration Processing Framework.
-Git repo is https://github.com/IlyaPrusakou/aipf.git
+[![Project Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#)
+[![ABAP](https://img.shields.io/badge/Language-ABAP-blue.svg)](#)
+[![Platform](https://img.shields.io/badge/Platform-SAP%20BTP%20%7C%20On--Premise-blue)](#)
+[![Built with: abapGit](https://img.shields.io/badge/built%20with-abapGit-green.svg)](https://abapgit.org)
+
+> ⚠️ **Development Status (Pre-Release):** This repository contains a functional demonstration application built for the **Agent Integration Processing Framework (AIPF)**. The framework and this demo are currently under active development. APIs, database schemas, and tool definitions are subject to change. Feedback and early contributions are highly welcome!
+
+This is a comprehensive blueprint application showcasing how multimodal AI can be integrated directly into core SAP enterprise workflows using the [AIPF Core Framework](https://github.com/IlyaPrusakou/aipf.git).
+
+---
 
 <img width="1000" height="636" alt="image" src="https://github.com/user-attachments/assets/aa7aceae-f1c5-45cc-9267-bfa5c9728a67" />
+
+---
 
 ## Prerequisites:
 1. BTP, on-premise, private or public cloud system
