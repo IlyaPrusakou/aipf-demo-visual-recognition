@@ -40,7 +40,7 @@ Execute the setup classes provided by the core framework to instantiate necessar
 2. Create agent `DOC_VISUAL_RECOGNITION` and its tools via `ZPRU_CL_DOC_VIS_TEST_DATA`
 
 ## Configuration State
-Eventually, you will recieve the following definition of vision recognition agent:
+Eventually, you will receive the following definition of vision recognition agent:
 1. Agent Type Table `ZPRU_AGENT_TYPE`:
 
 <img width="1112" height="122" alt="image" src="https://github.com/user-attachments/assets/30f098ee-2ad6-467d-bf4f-63cf714f231c" />
