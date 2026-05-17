@@ -384,5 +384,15 @@ User Input (Message + Scanned CMR Image)
 
 ---
 
+# Contributing & Feedback
 
+Since this project is in its early stages, community insights are invaluable. 
+
+* **Found a Bug?** Open an [Issue](https://github.com/IlyaPrusakou/aipf-demo-visual-recognition/issues).
+* **Want to Discuss Features?** Feel free to initiate a thread in GitHub Discussions regarding agentic workflows in ABAP.
+* **Contributions**: Pull requests are welcome! If you plan to make significant architectural modifications, please open an issue first to discuss your intended changes.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
