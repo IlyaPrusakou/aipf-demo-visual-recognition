@@ -15,17 +15,29 @@ This is a comprehensive blueprint application showcasing how multimodal AI can b
 
 ---
 
-## Prerequisites:
-1. BTP, on-premise, private or public cloud system
-2. ADT Tools in Eclipse
-3. abapGit
+## Prerequisites
 
-## How to try this demo:
-1. Install core AIPF framework via abapGit: `https://github.com/IlyaPrusakou/aipf.git`
-2. Create number range intervals for object `ZPRU_AXCHD` via `ZPRU_CL_SNRO_INTERVALS`
-3. Create agent type entry `AGTYP1` via `ZPRU_CL_TEST_DATA`
-4. Install demo agent: `https://github.com/IlyaPrusakou/aipf-demo-visual-recognition.git`
-5. Create agent `DOC_VISUAL_RECOGNITION` and its tools via `ZPRU_CL_DOC_VIS_TEST_DATA`
+To import and execute this demo application, your environment must meet the following requirements:
+* **SAP Environment**: SAP BTP ABAP Environment, S/4HANA Private Cloud, or S/4HANA On-Premise system.
+* **Development Tools**: ABAP Development Tools (ADT) in Eclipse.
+* **Git Client**: [abapGit](https://abapgit.org) configured in your target system.
+
+## Installation & Setup
+
+### 1. Install Core AIPF Framework
+Before deploying the demo agent, you must pull and activate the core framework:
+1. Open abapGit and create a new **Online Repository** with the URL: `https://github.com/IlyaPrusakou/aipf.git`
+2. Pull the objects into your development system.
+3. Activate the objects sequentially (refer to the core AIPF repository documentation for specific dictionary and RAP activation sequences).
+
+### 2. Base Framework Initialization
+Execute the setup classes provided by the core framework to instantiate necessary configurations:
+1. Run class `ZPRU_CL_SNRO_INTERVALS` to generate number range intervals for object `ZPRU_AXCHD`.
+2. Run class `ZPRU_CL_TEST_DATA` to initialize the core agent type entry (`AGTYP1`).
+
+### 3. Install Demo Agent
+1. Install demo agent: `https://github.com/IlyaPrusakou/aipf-demo-visual-recognition.git`
+2. Create agent `DOC_VISUAL_RECOGNITION` and its tools via `ZPRU_CL_DOC_VIS_TEST_DATA`
 
 ## Configuration State
 Eventually, you will recieve the following definition of vision recognition agent:
