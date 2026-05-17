@@ -7,6 +7,8 @@
 
 > ⚠️ **Development Status (Pre-Release):** This repository contains a functional demonstration application built for the **Agent Integration Processing Framework (AIPF)**. The framework and this demo are currently under active development. APIs, database schemas, and tool definitions are subject to change. Feedback and early contributions are highly welcome!
 
+> 🛠️ **Ecosystem Integration:** This framework is designed and intended to be used in conjunction with the official **[ABAP AI SDK](https://help.sap.com/docs/abap-ai/generative-ai-in-abap-cloud/api-reference-guide-for-abap-ai-sdk)**. It relies on the SDK's standard enterprise capabilities to securely handle Generative AI communication layers within ABAP Cloud environments.
+
 This is a comprehensive blueprint application showcasing how multimodal AI can be integrated directly into core SAP enterprise workflows using the [AIPF Core Framework](https://github.com/IlyaPrusakou/aipf.git).
 
 ---
@@ -134,7 +136,7 @@ The Document Vision Agent turns a paper document into a complete digital warehou
 
 ## Overview
 
-The **Visual Recognition Agent** is a demonstration agent built on top of the **AIPF (Agent Integration Processing Framework)** core framework. It showcases a complete warehouse document processing workflow using multimodal AI (Google Gemini 2.5 Flash) for document understanding, combined with pure ABAP logic for business processing, validation, and persistence via SAP RAP (RESTful Application Programming).
+The **Visual Recognition Agent** is a demonstration agent built on top of the **AIPF (Agent Integration Processing Framework)** core framework. It showcases a complete warehouse document processing workflow using multimodal AI (ABAP AI SDK) for document understanding, combined with pure ABAP logic for business processing, validation, and persistence via SAP RAP (RESTful Application Programming).
 
 The agent is registered in the AIPF framework under the name **`DOC_VISUAL_RECOGNITION`** with agent type `AGTYP1`.
 
@@ -170,12 +172,13 @@ This is the **brain** of the agent, inheriting from `ZPRU_CL_DECISION_PROVIDER`.
 - Receives an input payload containing **messages with attached images** (scanned CMR documents in JPEG format, Base64-encoded).
 - Deserializes the JSON input into structured ABAP types.
 
-### 2. Multimodal LLM Call — Google Gemini 2.5 Flash
-- Builds a **Gemini API request** with:
-  - **System instructions**: Business rules (always use USD, KG, M3), output format instructions, JSON schema.
-  - **Attachment images**: Converts each attached JPEG to Base64 inline data and sends it as parts of the Gemini content request.
-- Sends the payload to `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent` (currently **commented out**, using mock test data for demo).
-- Receives structured JSON output with CMR header/item data extracted from the scanned document image.
+### 2. Multimodal LLM Call — ABAP AI SDK
+
+* **Prepares an Intelligent Scenario Request container via the standard SDK factory:**
+    * **System Instructions:** Passes framework-level business rules (always use USD, KG, M3), execution schema constraints, and output formatting rules into the container via `lo_messages->set_system_role(...)`.
+    * **Multimodal Attachment Parsing:** Converts each attached JPEG file (scanned CMR waybills) to an inline Base64 payload, mapping them structurally alongside textual prompt instructions inside the SDK container.
+* **Orchestrates execution safely through SAP AI Core:** Executes the remote orchestration request securely using the immutable `cl_aic_islm_compl_api_factory` pattern inside ABAP Cloud, routing the pipeline dynamically via standard SAP service destination layers.
+* **Captures and structuralizes the outcome context:** Receives a structured JSON payload directly back from the model response via `lo_response->get_completion()`, allowing the framework to extract raw header/item data safely from the scanned document image for transactional validation phases.
 
 ### 3. Execution Plan Generation
 After the LLM thinking phase, the agent defines a **fixed 6-step execution plan** (deterministic orchestration):
@@ -349,8 +352,8 @@ User Input (Message + Scanned CMR Image)
   ▼
 [1] DECISION PROVIDER (Thinking Phase)
     │  ├─ Deserialize input payload (message + image attachments)
-    │  ├─ Build Gemini request (system + schema + base64 images)
-    │  ├─ Call Gemini 2.5 Flash (multimodal) → Extract JSON with headers/items
+    │  ├─ Build ABAP AI SDK request (system + schema + base64 images)
+    │  ├─ Call ABAP AI SDK → Extract JSON with headers/items
     │  └─ Generate Execution Plan (6 fixed steps)
     │
     ▼
