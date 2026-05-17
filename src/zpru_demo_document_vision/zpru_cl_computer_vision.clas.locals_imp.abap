@@ -818,7 +818,13 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD assign_cmr_ids.
-    SELECT MAX( cmrid ) FROM zr_pru_cmr_header INTO @DATA(lv_max_cmrid).
+
+    SELECT cmrid
+    FROM  zr_pru_cmr_header
+    ORDER BY cmrid DESCENDING
+    INTO TABLE @DATA(lt_last_id) UP TO 1 ROWS.
+
+    DATA(lv_max_cmrid) = VALUE #( lt_last_id[ 1 ]-cmrid OPTIONAL ).
     DATA(lv_next_cmrid_num) = CONV i( lv_max_cmrid ) + 1.
 
     LOOP AT ct_headers ASSIGNING FIELD-SYMBOL(<ls_header>).
@@ -841,7 +847,7 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
       lv_header_cid += 1.
       APPEND INITIAL LINE TO rt_create ASSIGNING FIELD-SYMBOL(<ls_entity>).
       <ls_entity> = CORRESPONDING #( <ls_header> MAPPING TO ENTITY CHANGING CONTROL ).
-      <ls_entity>-%cid = lv_header_cid.
+      <ls_entity>-%cid = |H_{ lv_header_cid }|.
 
       <ls_entity>-%control-cmruuid = if_abap_behv=>mk-off.
     ENDLOOP.
@@ -865,7 +871,7 @@ CLASS lcl_adf_create_cmr IMPLEMENTATION.
       LOOP AT GROUP <group> ASSIGNING FIELD-SYMBOL(<ls_item_member>).
         APPEND INITIAL LINE TO <ls_create_item>-%target ASSIGNING FIELD-SYMBOL(<ls_target>).
         <ls_target> = CORRESPONDING #( <ls_item_member> MAPPING TO ENTITY CHANGING CONTROL ).
-        <ls_target>-%cid = lv_item_cid.
+        <ls_target>-%cid =  |I_{ lv_item_cid }|.
         CLEAR: <ls_target>-cmruuid,
                <ls_target>-%control-cmruuid.
         lv_item_cid += 1.
@@ -1395,9 +1401,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                                                findingstatus = 'INCOMPLETE'
                                                                findingtype   = 'MANDATORY_FIELD'
                                                                fieldname     = 'SENDERINFO'
-                                                               findingmsg    = 'Sender information is missing'
-                                                               createdby     = sy-uname
-                                                               createdat     = VALUE #( ) )
+                                                               findingmsg    = 'Sender information is missing'  )
                            CHANGING  ct_findings    = ct_findings  ).
 
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
@@ -1416,16 +1420,13 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
 
   METHOD add_finding_to_output.
     DATA(ls_finding) = is_finding_rap.
-    GET TIME STAMP FIELD ls_finding-createdat.
     APPEND ls_finding TO ct_findings.
   ENDMETHOD.
 
@@ -1445,9 +1446,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                                                findingstatus = 'INCOMPLETE'
                                                                findingtype   = 'MANDATORY_FIELD'
                                                                fieldname     = 'CONSIGNEEINFO'
-                                                               findingmsg    = 'Consignee information is missing'
-                                                               createdby     = sy-uname
-                                                               createdat     = VALUE #( ) )
+                                                               findingmsg    = 'Consignee information is missing'  )
                            CHANGING  ct_findings    = ct_findings  ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1465,9 +1464,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1488,9 +1485,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                                                findingstatus = 'INCOMPLETE'
                                                                findingtype   = 'MANDATORY_FIELD'
                                                                fieldname     = 'CARRIERINFO'
-                                                               findingmsg    = 'Carrier information is missing'
-                                                               createdby     = sy-uname
-                                                               createdat     = VALUE #( ) )
+                                                               findingmsg    = 'Carrier information is missing'  )
                            CHANGING  ct_findings    = ct_findings  ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1508,9 +1503,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1531,9 +1524,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                                                findingstatus = 'INCOMPLETE'
                                                                findingtype   = 'MANDATORY_FIELD'
                                                                fieldname     = 'TAKINGOVERPLACE'
-                                                               findingmsg    = 'Taking-over place is missing'
-                                                               createdby     = sy-uname
-                                                               createdat     = VALUE #( ) )
+                                                               findingmsg    = 'Taking-over place is missing'  )
                            CHANGING  ct_findings    = ct_findings ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1551,9 +1542,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1574,9 +1563,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                                                findingstatus = 'INCOMPLETE'
                                                                findingtype   = 'MANDATORY_FIELD'
                                                                fieldname     = 'DELIVERYPLACE'
-                                                               findingmsg    = 'Delivery place is missing'
-                                                               createdby     = sy-uname
-                                                               createdat     = VALUE #( ) )
+                                                               findingmsg    = 'Delivery place is missing'  )
                            CHANGING  ct_findings    = ct_findings  ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1594,9 +1581,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1617,9 +1602,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                                                findingstatus = 'INCOMPLETE'
                                                                findingtype   = 'DATE_CHECK'
                                                                fieldname     = 'TAKINGOVERDATE'
-                                                               findingmsg    = 'Taking-over date is missing'
-                                                               createdby     = sy-uname
-                                                               createdat     = VALUE #( ) )
+                                                               findingmsg    = 'Taking-over date is missing'  )
                            CHANGING  ct_findings    = ct_findings  ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1637,9 +1620,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1661,9 +1642,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                findingstatus = 'INCOMPLETE'
                                findingtype   = 'MANDATORY_FIELD'
                                fieldname     = 'CURRENCY'
-                               findingmsg    = 'Currency required when cash on delivery is set'
-                               createdby     = sy-uname
-                               createdat     = VALUE #( ) )
+                               findingmsg    = 'Currency required when cash on delivery is set'  )
                            CHANGING  ct_findings    = ct_findings  ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1681,9 +1660,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1708,9 +1685,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                                                findingstatus = 'INVALID'
                                                                findingtype   = 'ITEM_COUNT'
                                                                fieldname     = ''
-                                                               findingmsg    = 'No items found for CMR'
-                                                               createdby     = sy-uname
-                                                               createdat     = VALUE #( ) )
+                                                               findingmsg    = 'No items found for CMR'  )
                            CHANGING  ct_findings    = ct_findings ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1728,9 +1703,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1754,9 +1727,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                findingstatus = 'INCOMPLETE'
                                findingtype   = 'MANDATORY_FIELD'
                                fieldname     = 'NATUREOFGOODS'
-                               findingmsg    = |Nature of goods is missing for item { is_item-itemposition }|
-                               createdby     = sy-uname
-                               createdat     = VALUE #( ) )
+                               findingmsg    = |Nature of goods is missing for item { is_item-itemposition }|  )
                            CHANGING  ct_findings    = ct_findings  ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1774,9 +1745,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1801,9 +1770,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
           findingstatus = 'INCOMPLETE'
           findingtype   = 'WEIGHT_CHECK'
           fieldname     = 'GROSSWEIGHT'
-          findingmsg    = |Gross weight must be greater than zero for item { is_item-itemposition }|
-          createdby     = sy-uname
-          createdat     = VALUE #( ) )
+          findingmsg    = |Gross weight must be greater than zero for item { is_item-itemposition }|  )
       CHANGING  ct_findings    = ct_findings ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1821,9 +1788,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1847,9 +1812,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                findingstatus = 'INCOMPLETE'
                                findingtype   = 'MANDATORY_FIELD'
                                fieldname     = 'WEIGHTUNITFIELD'
-                               findingmsg    = |Weight unit is missing for item { is_item-itemposition }|
-                               createdby     = sy-uname
-                               createdat     = VALUE #( ) )
+                               findingmsg    = |Weight unit is missing for item { is_item-itemposition }|  )
                            CHANGING  ct_findings    = ct_findings  ).
     DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
     IF ls_latest_finding IS INITIAL.
@@ -1867,9 +1830,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = if_abap_behv=>mk-on
                                  findingtype   = if_abap_behv=>mk-on
                                  fieldname     = if_abap_behv=>mk-on
-                                 findingmsg    = if_abap_behv=>mk-on
-                                 createdby     = if_abap_behv=>mk-on
-                                 createdat     = if_abap_behv=>mk-on ).
+                                 findingmsg    = if_abap_behv=>mk-on  ).
 
     cv_cid_counter += 1.
   ENDMETHOD.
@@ -1891,9 +1852,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                  findingstatus = 'INCOMPLETE'
                                  findingtype   = 'DG_FIELDS'
                                  fieldname     = 'UNITEDNATIONNUMBER'
-                                 findingmsg    = |UN number required for dangerous goods item { is_item-itemposition }|
-                                 createdby     = sy-uname
-                                 createdat     = VALUE #( ) )
+                                 findingmsg    = |UN number required for dangerous goods item { is_item-itemposition }|  )
                              CHANGING  ct_findings    = ct_findings  ).
 
       DATA(ls_latest_finding) = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
@@ -1912,9 +1871,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                    findingstatus = if_abap_behv=>mk-on
                                    findingtype   = if_abap_behv=>mk-on
                                    fieldname     = if_abap_behv=>mk-on
-                                   findingmsg    = if_abap_behv=>mk-on
-                                   createdby     = if_abap_behv=>mk-on
-                                   createdat     = if_abap_behv=>mk-on ).
+                                   findingmsg    = if_abap_behv=>mk-on  ).
 
       cv_cid_counter += 1.
     ENDIF.
@@ -1936,9 +1893,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
             findingstatus = 'INCOMPLETE'
             findingtype   = 'DG_FIELDS'
             fieldname     = 'HAZARDCLASS'
-            findingmsg    = |Hazard class required for dangerous goods item { is_item-itemposition }|
-            createdby     = sy-uname
-            createdat     = VALUE #( ) )
+            findingmsg    = |Hazard class required for dangerous goods item { is_item-itemposition }|  )
         CHANGING  ct_findings    = ct_findings  ).
 
       ls_latest_finding = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
@@ -1957,9 +1912,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                    findingstatus = if_abap_behv=>mk-on
                                    findingtype   = if_abap_behv=>mk-on
                                    fieldname     = if_abap_behv=>mk-on
-                                   findingmsg    = if_abap_behv=>mk-on
-                                   createdby     = if_abap_behv=>mk-on
-                                   createdat     = if_abap_behv=>mk-on ).
+                                   findingmsg    = if_abap_behv=>mk-on  ).
 
       cv_cid_counter += 1.
     ENDIF.
@@ -1981,9 +1934,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
             findingstatus = 'INCOMPLETE'
             findingtype   = 'DG_FIELDS'
             fieldname     = 'PACKINGGROUP'
-            findingmsg    = |Packing group required for dangerous goods item { is_item-itemposition }|
-            createdby     = sy-uname
-            createdat     = VALUE #( ) )
+            findingmsg    = |Packing group required for dangerous goods item { is_item-itemposition }|  )
         CHANGING  ct_findings    = ct_findings  ).
 
       ls_latest_finding = VALUE #( ct_findings[ lines( ct_findings ) ] OPTIONAL ).
@@ -2002,9 +1953,7 @@ CLASS lcl_adf_validate_cmr IMPLEMENTATION.
                                    findingstatus = if_abap_behv=>mk-on
                                    findingtype   = if_abap_behv=>mk-on
                                    fieldname     = if_abap_behv=>mk-on
-                                   findingmsg    = if_abap_behv=>mk-on
-                                   createdby     = if_abap_behv=>mk-on
-                                   createdat     = if_abap_behv=>mk-on ).
+                                   findingmsg    = if_abap_behv=>mk-on  ).
 
       cv_cid_counter += 1.
     ENDIF.
@@ -2159,7 +2108,7 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
     DATA(lv_count) = 1.
     LOOP AT it_headers ASSIGNING FIELD-SYMBOL(<ls_header>).
       APPEND INITIAL LINE TO rt_create ASSIGNING FIELD-SYMBOL(<ls_entity>).
-      <ls_entity>-%cid         = lv_count.
+      <ls_entity>-%cid         = |H_{ lv_count }|.
       <ls_entity>-deliveryid   = <ls_header>-deliveryid.
       <ls_entity>-vendor       = <ls_header>-vendor.
       <ls_entity>-consignee    = <ls_header>-consignee.
@@ -2203,7 +2152,7 @@ CLASS lcl_adf_create_inb_delivery IMPLEMENTATION.
         <ls_target>-grossweight  = <ls_member>-grossweight.
         <ls_target>-weightunit   = <ls_member>-weightunit.
         <ls_target>-hazardclass  = <ls_member>-hazardclass.
-        <ls_target>-%cid         = lv_cid.
+        <ls_target>-%cid         = |I_{ lv_cid }|.
         <ls_target>-%control-deliveryid   = if_abap_behv=>mk-on.
         <ls_target>-%control-itempos      = if_abap_behv=>mk-on.
         <ls_target>-%control-materialdesc = if_abap_behv=>mk-on.

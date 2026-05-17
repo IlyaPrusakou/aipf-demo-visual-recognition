@@ -574,4 +574,42 @@ CLASS lcl_adf_schema_provider DEFINITION INHERITING FROM zpru_cl_tool_schema_pro
   PROTECTED SECTION.
     METHODS get_input_abap_type   REDEFINITION.
     METHODS get_input_json_schema REDEFINITION.
+
+    METHODS get_cmr_create
+      RETURNING VALUE(rv_schema) TYPE string.
+
+    METHODS get_classify_danger_goods
+      RETURNING VALUE(rv_schema) TYPE string.
+
+    METHODS get_validate_cmr
+      RETURNING VALUE(rv_schema) TYPE string.
+
+    METHODS get_create_inb_delivery
+      RETURNING VALUE(rv_schema) TYPE string.
+
+    METHODS get_find_storage_bin
+      RETURNING VALUE(rv_schema) TYPE string.
+
+    METHODS get_create_warehouse_task
+      RETURNING VALUE(rv_schema) TYPE string.
+
+    METHODS fill_cmr_create_schm
+      RETURNING VALUE(rs_schema) TYPE zpru_s_json_schema.
+
+    METHODS fill_class_dgr_schm
+      RETURNING VALUE(rs_schema) TYPE zpru_s_json_schema.
+
+    METHODS fill_val_cmr_schm
+      RETURNING VALUE(rs_schema) TYPE zpru_s_json_schema.
+
+    METHODS fill_inb_del_schm
+      RETURNING VALUE(rs_schema) TYPE zpru_s_json_schema.
+
+    METHODS fill_find_bin_schm
+      RETURNING VALUE(rs_schema) TYPE zpru_s_json_schema.
+
+    METHODS fill_wh_task_schm
+      RETURNING VALUE(rs_schema) TYPE zpru_s_json_schema.
 ENDCLASS.
+
+
